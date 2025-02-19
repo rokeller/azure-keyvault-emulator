@@ -62,6 +62,44 @@ namespace AzureKeyVaultEmulator.Keys.Controllers
             return Ok(keyResult);
         }
 
+        [HttpPost("{version}/wrapkey")]
+        [Produces("application/json")]
+        [Consumes("application/json")]
+        [ProducesResponseType(typeof(KeyOperationResult), StatusCodes.Status200OK)]
+        public IActionResult WrapKey(
+            [FromRoute] string name,
+            [FromRoute] string version,
+            [FromQuery(Name = "api-version")] string apiVersion,
+            [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] KeyOperationParameters requestBody)
+        {
+            KeyOperationResult wrapped = _keyVaultKeyService.WrapKey(name, version, requestBody);
+            if (wrapped == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(wrapped);
+        }
+
+        [HttpPost("{version}/unwrapkey")]
+        [Produces("application/json")]
+        [Consumes("application/json")]
+        [ProducesResponseType(typeof(KeyOperationResult), StatusCodes.Status200OK)]
+        public IActionResult UnwrapKey(
+            [FromRoute] string name,
+            [FromRoute] string version,
+            [FromQuery(Name = "api-version")] string apiVersion,
+            [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] KeyOperationParameters requestBody)
+        {
+            KeyOperationResult unwrapped = _keyVaultKeyService.UnwrapKey(name, version, requestBody);
+            if (unwrapped == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(unwrapped);
+        }
+
         [HttpPost("{version}/encrypt")]
         [Produces("application/json")]
         [Consumes("application/json")]
