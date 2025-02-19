@@ -13,6 +13,9 @@ namespace AzureKeyVaultEmulator.Keys.Services
         KeyResponse Get(string name, string version);
         KeyResponse CreateKey(string name, CreateKeyModel key);
 
+        KeyOperationResult WrapKey(string name, string version, KeyOperationParameters request);
+        KeyOperationResult UnwrapKey(string name, string version, KeyOperationParameters request);
+
         KeyOperationResult Encrypt(string name, string version, KeyOperationParameters keyOperationParameters);
         KeyOperationResult Decrypt(string keyName, string keyVersion, KeyOperationParameters keyOperationParameters);
     }
@@ -110,6 +113,36 @@ namespace AzureKeyVaultEmulator.Keys.Services
             };
         }
 
-        private static string GetCacheId(string name, string version = null) => name + (version ?? "");
+        public KeyOperationResult WrapKey(string name, string version, KeyOperationParameters request)
+        {
+            KeyResponse key = Get(name, version);
+            if (null == key)
+            {
+                return null;
+            }
+            var encrypted = key.Key.Encrypt(request);
+
+            return new KeyOperationResult()
+            {
+                KeyIdentifier = key.Key.KeyIdentifier,
+                Data = WebEncoders.Base64UrlEncode(encrypted),
+            };
+        }
+
+        public KeyOperationResult UnwrapKey(string name, string version, KeyOperationParameters request)
+        {
+            KeyResponse key = Get(name, version);
+            if (key == null)
+            {
+                return null;
+            }
+            var decrypted = key.Key.Decrypt(request);
+
+            return new KeyOperationResult()
+            {
+                KeyIdentifier = key.Key.KeyIdentifier,
+                Data = decrypted,
+            };
+        }
     }
 }
