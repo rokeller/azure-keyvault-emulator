@@ -1,12 +1,11 @@
-# DEPRECATION NOTICE
-As of `10/29/2024` Basis Theory is no longer maintaining this repository.
+# Azure KeyVault Emulator
 
-## Azure KeyVault Emulator
+This is work based originally on [Basis Theory](https://basistheory.com/)'s
+[Azure KeyVault Emulator](https://github.com/Basis-Theory/azure-keyvault-emulator)
+which is no longer maintained by them - so I try to do that here.
 
-[![Version](https://img.shields.io/docker/pulls/basistheory/azure-keyvault-emulator.svg)](https://hub.docker.com/r/basistheory/azure-keyvault-emulator)
-[![Verify](https://github.com/Basis-Theory/azure-keyvault-emulator/actions/workflows/verify.yml/badge.svg)](https://github.com/Basis-Theory/azure-keyvault-emulator/actions/workflows/verify.yml)
-
-The [Basis Theory](https://basistheory.com/) Azure KeyVault Emulator to mock interactions with Azure KeyVault using the official Azure KeyVault client
+The Azure KeyVault Emulator helps emulating interactions with Azure KeyVault
+using the official Azure KeyVault clients/SDKs.
 
 ## Supported Operations
 
@@ -19,9 +18,13 @@ The [Basis Theory](https://basistheory.com/) Azure KeyVault Emulator to mock int
 - Get Key by Version
 - Encrypt
 - Decrypt
-- Supported [Algorithms](https://docs.microsoft.com/en-us/rest/api/keyvault/decrypt/decrypt#jsonwebkeyencryptionalgorithm)
-    - `RSA1_5`
-    - `RSA-OAEP`
+- Wrap Key
+- Unwrap Key
+
+Supported [Algorithms](https://learn.microsoft.com/en-us/rest/api/keyvault/keys/decrypt/decrypt?view=rest-keyvault-keys-7.4&tabs=HTTP#jsonwebkeyencryptionalgorithm)
+for Encrypt, Decrypt, Wrap Key and Unwrap Key operations:
+  - `RSA1_5`
+  - `RSA-OAEP`
 
 ### Secrets
 
@@ -33,27 +36,42 @@ The [Basis Theory](https://basistheory.com/) Azure KeyVault Emulator to mock int
 
 ### HTTPS
 
-Azure KeyClient and SecretClient require HTTPS communication with a KeyVault instance.
-When accessing the emulator on `localhost`, configure a trusted TLS certificate with [dotnet dev-certs](https://docs.microsoft.com/en-us/dotnet/core/additional-tools/self-signed-certificates-guide#with-dotnet-dev-certs).
-
-For accessing the emulator with a hostname other than `localhost`, a self-signed certificate needs to be generated and trusted by the client. See [Adding to docker-compose](#adding-to-docker-compose) for further instructions.
+Azure KeyClient and SecretClient require HTTPS communication with a KeyVault
+instance. When accessing the emulator on `localhost`, configure a trusted TLS
+certificate with [dotnet dev-certs](https://docs.microsoft.com/en-us/dotnet/core/additional-tools/self-signed-certificates-guide#with-dotnet-dev-certs).
+Alternatively, you can use the default self-signed certificate provided with the
+emulator (see [.certs](./.certs)). This certificate is issued for the FQDN
+`emulator.vault.azure.net` and has additional names in the SAN list:
+`localhost.vault.azure.net`, `localhost`, as well as the IP address `127.0.0.1`.
 
 ### AuthN/AuthZ
 
-Azure KeyClient and SecretClient use a [ChallengeBasedAuthenticationPolicy](https://github.com/Azure/azure-sdk-for-net/blob/b30fa6d0d402511fdf3270c5d1d9ae5dfa2a0340/sdk/keyvault/Azure.Security.KeyVault.Shared/src/ChallengeBasedAuthenticationPolicy.cs#L64-L66)
-to determine the authentication scheme used by the server. In order for the KeyVault Emulator to work with the Azure SDK, the emulator requires JWT authentication in the `Authorization` header with `Bearer` prefix.
-KeyVault Emulator only validates the JWT is well-formed.
+Azure KeyClient and SecretClient use a
+[ChallengeBasedAuthenticationPolicy](https://github.com/Azure/azure-sdk-for-net/blob/b30fa6d0d402511fdf3270c5d1d9ae5dfa2a0340/sdk/keyvault/Azure.Security.KeyVault.Shared/src/ChallengeBasedAuthenticationPolicy.cs#L64-L66)
+to determine the authentication scheme used by the server. In order for the
+KeyVault Emulator to work with the Azure SDK, the emulator requires JWT bearer
+authentication in the `Authorization` header. The KeyVault Emulator only
+validates that the JWT is well-formed, but does not validate issuer, audience,
+token lifetime or any other such claims.
+
+By default, you can use the following JWT token for authentication:
+
+`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws`
+
+For example:
 
 ```shell
 curl -X 'GET' \
-  'https://localhost:5551/secrets/foo' \
+  'https://localhost:11001/secrets/foo' \
   -H 'accept: application/json' \
   -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws'
 ```
 
 ## Adding to docker-compose
 
-For the Azure KeyVault Emulator to be accessible from other containers in the same compose file, a new OpenSSL certificate has to be generated:
+For the Azure KeyVault Emulator to be accessible from other containers in the
+same compose file, a new OpenSSL certificate has to be generated:
+
 1. Replace `<emulator-hostname>` and run the following script to generate a new public/private keypair:
 
     ```
@@ -134,7 +152,7 @@ To satisfy the new challenge resource verification requirements, do one of the f
    1. Set `DisableChallengeResourceVerification` to true in your client options to disable verification.
 ```csharp
 var client = new SecretClient(
-    new Uri("https://localhost.vault.azure.net:5551/"), 
+    new Uri("https://localhost.vault.azure.net:11001/"), 
     new LocalTokenCredential(), 
     new SecretClientOptions
     {
@@ -149,7 +167,7 @@ The provided scripts will check for all dependencies, start docker, build the so
 ### Dependencies
 - [Docker](https://www.docker.com/products/docker-desktop)
 - [Docker Compose](https://www.docker.com/products/docker-desktop)
-- [.NET 6](https://dotnet.microsoft.com/download/dotnet/6.0)
+- [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ### Build the KeyVault emulator and run Tests
 
