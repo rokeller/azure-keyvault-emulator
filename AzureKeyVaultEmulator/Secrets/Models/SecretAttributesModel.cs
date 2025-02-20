@@ -8,9 +8,11 @@ namespace AzureKeyVaultEmulator.Secrets.Models
         public bool Enabled { get; set; }
 
         [JsonPropertyName("exp")]
-        public int Expiration { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? Expiration { get; set; }
 
         [JsonPropertyName("nbf")]
-        public int NotBefore { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? NotBefore { get; set; }
     }
 }

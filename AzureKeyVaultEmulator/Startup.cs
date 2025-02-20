@@ -13,26 +13,29 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-namespace AzureKeyVaultEmulator
+namespace AzureKeyVaultEmulator;
+
+internal sealed class Startup
 {
-    public class Startup
+    private readonly IConfiguration _configuration;
+
+    public Startup(IConfiguration configuration)
     {
-        private readonly IConfiguration _configuration;
+        _configuration = configuration;
+    }
 
-        public Startup(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .Configure<StoreOptions>(_configuration.GetSection("Store"))
+            .AddControllers()
+            .AddJsonOptions(o =>
+            {
+                o.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            })
+            .Services
 
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddControllers()
-                .AddJsonOptions(o =>
-                {
-                    o.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-                });
-
-            services.AddSwaggerGen(c =>
+            .AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Azure KeyVault Emulator", Version = "v1" });
                 c.AddSecurityDefinition("JWT", new OpenApiSecurityScheme
@@ -40,7 +43,8 @@ namespace AzureKeyVaultEmulator
                     Name = "Authorization",
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.Http,
-                    Description = "JWT Authorization header using the Bearer scheme. Use 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws'",
+                    Description = "JWT Authorization header using the Bearer scheme. " +
+                        "Use 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws'",
                     Scheme = JwtBearerDefaults.AuthenticationScheme,
                 });
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -53,65 +57,64 @@ namespace AzureKeyVaultEmulator
                         Array.Empty<string>()
                     }
                 });
-            });
+            })
 
-            services.AddHttpContextAccessor();
-            services.AddScoped<IKeyVaultKeyService, KeyVaultKeyService>();
-            services.AddScoped<IKeyVaultSecretService, KeyVaultSecretService>();
+            .AddHttpContextAccessor()
+            .AddSingleton<IKeyVaultKeyService, KeyVaultKeyService>()
+            .AddScoped<IKeyVaultSecretService, KeyVaultSecretService>()
 
-            services.AddAuthentication(x =>
-                {
-                    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, x =>
-                {
-                    x.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidIssuer = "https://localhost:5001/",
-                        ValidateIssuer = false,
-                        ValidateAudience = false,
-                        ValidateLifetime = false,
-                        RequireSignedTokens = false,
-                        ValidateIssuerSigningKey = false,
-                        TryAllIssuerSigningKeys = false,
-                        SignatureValidator = (token, _) =>
-                        {
-                            return new JsonWebToken(token);
-                        },
-                    };
-
-                    x.Events = new JwtBearerEvents
-                    {
-                        OnChallenge = context =>
-                        {
-                            var requestHostSplit = context.Request.Host.ToString().Split(".", 2);
-                            var scope = $"https://{requestHostSplit[^1]}/.default";
-                            context.Response.Headers.Remove("WWW-Authenticate");
-                            context.Response.Headers["WWW-Authenticate"] = $"Bearer authorization=\"https://localhost:5001/foo/bar\", scope=\"{scope}\", resource=\"https://vault.azure.net\"";
-                            return Task.CompletedTask;
-                        }
-                    };
-                });
-        }
-
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            if (env.IsDevelopment())
+            .AddAuthentication(x =>
             {
-                app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Azure KeyVault Emulator v1"));
-            }
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, x =>
+            {
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = false,
+                    RequireSignedTokens = false,
+                    ValidateIssuerSigningKey = false,
+                    TryAllIssuerSigningKeys = false,
+                    SignatureValidator = (token, _) =>
+                    {
+                        return new JsonWebToken(token);
+                    },
+                };
 
-            app.UseHttpsRedirection();
+                x.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        var requestHostSplit = context.Request.Host.ToString().Split(".", 2);
+                        var scope = $"https://{requestHostSplit[^1]}/.default";
+                        context.Response.Headers.Remove("WWW-Authenticate");
+                        context.Response.Headers["WWW-Authenticate"] = $"Bearer authorization=\"https://localhost:5001/foo/bar\", scope=\"{scope}\", resource=\"https://vault.azure.net\"";
+                        return Task.CompletedTask;
+                    }
+                };
+            })
+            ;
+    }
 
-            app.UseRouting();
-
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+            app.UseSwagger();
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Azure KeyVault Emulator v1"));
         }
+
+        app.UseHttpsRedirection();
+
+        app.UseRouting();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
 }
