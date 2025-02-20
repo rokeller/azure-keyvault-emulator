@@ -12,7 +12,7 @@ namespace AzureKeyVaultEmulator.AcceptanceTests.Secrets
 
         public CreateSecretTests()
         {
-            _secretClient = new SecretClient(new Uri("https://localhost.vault.azure.net:5551/"),
+            _secretClient = new SecretClient(new Uri("https://localhost.vault.azure.net:11001/"),
                 new LocalTokenCredential(),
                 new SecretClientOptions
                 {
