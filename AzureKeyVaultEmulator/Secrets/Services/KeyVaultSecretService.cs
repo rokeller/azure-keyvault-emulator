@@ -1,66 +1,84 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using AzureKeyVaultEmulator.Secrets.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
-namespace AzureKeyVaultEmulator.Secrets.Services
+namespace AzureKeyVaultEmulator.Secrets.Services;
+
+internal sealed class KeyVaultSecretService : IKeyVaultSecretService
 {
-    public interface IKeyVaultSecretService
+    private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly ConcurrentDictionary<string, SecretResponse> secrets = new();
+    private readonly Store<SecretResponse> store;
+
+    public KeyVaultSecretService(
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<StoreOptions> storeOptions)
     {
-        SecretResponse Get(string name);
-        SecretResponse Get(string name, string version);
-        SecretResponse SetSecret(string name, SetSecretModel requestBody);
+        this.httpContextAccessor = httpContextAccessor;
+
+        string secretsStorageDir = Path.Combine(storeOptions.Value.BaseDir, "secrets");
+        store = new(new(secretsStorageDir));
+        LoadFromStore();
     }
 
-    public class KeyVaultSecretService : IKeyVaultSecretService
+    public SecretResponse Get(string name)
     {
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private static readonly ConcurrentDictionary<string, SecretResponse> Secrets = new();
+        secrets.TryGetValue(GetCacheId(name), out var found);
 
-        public KeyVaultSecretService(IHttpContextAccessor httpContextAccessor)
+        return found;
+    }
+
+    public SecretResponse Get(string name, string version)
+    {
+        secrets.TryGetValue(GetCacheId(name, version), out var found);
+
+        return found;
+    }
+
+    public SecretResponse SetSecret(string name, SetSecretModel secret)
+    {
+        var version = Guid.NewGuid().ToString("N");
+        var secretUrl = new UriBuilder
         {
-            _httpContextAccessor = httpContextAccessor;
-        }
+            Scheme = httpContextAccessor.HttpContext.Request.Scheme,
+            Host = httpContextAccessor.HttpContext.Request.Host.Host,
+            Port = httpContextAccessor.HttpContext.Request.Host.Port ?? -1,
+            Path = $"secrets/{name}/{version}"
+        };
 
-        public SecretResponse Get(string name)
+        var response = new SecretResponse
         {
-            Secrets.TryGetValue(GetSecretCacheId(name), out var found);
+            Id = secretUrl.Uri,
+            Value = secret.Value,
+            Attributes = secret.SecretAttributes,
+            Tags = secret.Tags
+        };
 
-            return found;
-        }
+        string secretKey = GetCacheId(name);
+        string versionKey = GetCacheId(name, version);
+        secrets.AddOrUpdate(secretKey, response, (_, _) => response);
+        secrets.TryAdd(versionKey, response);
 
-        public SecretResponse Get(string name, string version)
+        store.StoreObject(secretKey, response);
+        store.StoreObject(versionKey, response);
+
+        return response;
+    }
+
+    private static string GetCacheId(string name, string version = null)
+    {
+        return null == version ? name : $"{name}~{version}";
+    }
+
+    private void LoadFromStore()
+    {
+        foreach (KeyValuePair<string, SecretResponse> secret in store.ReadObjects())
         {
-            Secrets.TryGetValue(GetSecretCacheId(name, version), out var found);
-
-            return found;
+            secrets.TryAdd(secret.Key, secret.Value);
         }
-
-        public SecretResponse SetSecret(string name, SetSecretModel secret)
-        {
-            var version = Guid.NewGuid().ToString();
-            var secretUrl = new UriBuilder
-            {
-                Scheme = _httpContextAccessor.HttpContext.Request.Scheme,
-                Host = _httpContextAccessor.HttpContext.Request.Host.Host,
-                Port = _httpContextAccessor.HttpContext.Request.Host.Port ?? -1,
-                Path = $"secrets/{name}/{version}"
-            };
-
-            var response = new SecretResponse
-            {
-                Id = secretUrl.Uri,
-                Value = secret.Value,
-                Attributes = secret.SecretAttributes,
-                Tags = secret.Tags
-            };
-
-            Secrets.AddOrUpdate(GetSecretCacheId(name), response, (_, _) => response);
-            Secrets.TryAdd(GetSecretCacheId(name, version), response);
-
-            return response;
-        }
-
-        private static string GetSecretCacheId(string name, string version = null) => name + (version ?? "");
     }
 }
