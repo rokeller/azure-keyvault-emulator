@@ -60,14 +60,38 @@ By default, you can use the following JWT token for authentication:
 
 For example:
 
-```shell
+```bash
 curl -X 'GET' \
   'https://localhost:11001/secrets/foo' \
   -H 'accept: application/json' \
   -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws'
 ```
 
+### Connect clients with default Azure credentials
+
+Azure SDKs for different languages/runtimes typically come with an implementation
+for default Azure credentials, see for example [DefaultAzureCredential Class for .Net](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet). Usually you don't want to use
+different code paths for local development vs running in a production system.
+The emulator supports this, but it does require you to specify the ID of the
+Azure tenant when starting the emulator. This is because the Azure SDKs discover
+the tenant ID for which to get a JWT from the challenge issued with the
+`WWW-Authenticate` header.
+
+You can achieve this by running:
+
+```bash
+AUTH__TENANTID=$(az account show | jq -r '.tenantId') \
+  STORE__BASEDIR=~/path/to/my/.vault \
+  dotnet run --project AzureKeyVaultEmulator
+```
+
+This requires `az` CLI. Of course, if instead you want to hardcode the tenant ID,
+you can also do so on the command line, or in the [appsettings.json](./AzureKeyVaultEmulator/appsettings.json).
+The same goes for the path to the directory in which to persist keys and secrets.
+
 ## Adding to docker-compose
+
+> **Important**: This section is outdated and will be revised soon.
 
 For the Azure KeyVault Emulator to be accessible from other containers in the
 same compose file, a new OpenSSL certificate has to be generated:
@@ -162,6 +186,8 @@ var client = new SecretClient(
 
 ## Development
 
+> **Important**: This section is outdated and will be revised soon.
+
 The provided scripts will check for all dependencies, start docker, build the solution, and run all tests.
 
 ### Dependencies
@@ -170,6 +196,8 @@ The provided scripts will check for all dependencies, start docker, build the so
 - [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ### Build the KeyVault emulator and run Tests
+
+> **Important**: This section is outdated and will be revised soon.
 
 Run the following command from the root of the project:
 
