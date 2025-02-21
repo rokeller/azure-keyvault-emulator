@@ -37,7 +37,11 @@ internal sealed class Startup
 
             .AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Azure KeyVault Emulator", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Azure KeyVault Emulator",
+                    Version = "v1",
+                });
                 c.AddSecurityDefinition("JWT", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
@@ -52,7 +56,10 @@ internal sealed class Startup
                     {
                         new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "JWT" }
+                            Reference = new OpenApiReference {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "JWT",
+                            },
                         },
                         Array.Empty<string>()
                     }
@@ -84,6 +91,9 @@ internal sealed class Startup
                     },
                 };
 
+                Guid tenantId = _configuration.GetValue<Guid>("Auth:TenantId");
+                string challengeAuthorization = $"authorization=\"https://login.microsoft.com/{tenantId}\"";
+
                 x.Events = new JwtBearerEvents
                 {
                     OnChallenge = context =>
@@ -91,7 +101,8 @@ internal sealed class Startup
                         var requestHostSplit = context.Request.Host.ToString().Split(".", 2);
                         var scope = $"https://{requestHostSplit[^1]}/.default";
                         context.Response.Headers.Remove("WWW-Authenticate");
-                        context.Response.Headers["WWW-Authenticate"] = $"Bearer authorization=\"https://localhost:5001/foo/bar\", scope=\"{scope}\", resource=\"https://vault.azure.net\"";
+                        context.Response.Headers["WWW-Authenticate"] =
+                            $"Bearer {challengeAuthorization}, scope=\"{scope}\", resource=\"https://vault.azure.net\"";
                         return Task.CompletedTask;
                     }
                 };
