@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS builder
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS builder
 WORKDIR /app
 
 COPY *.sln .
@@ -12,7 +12,7 @@ RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj -c Release
 
 ########################################
 
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 WORKDIR /app
 
 RUN apk add --no-cache icu-libs tzdata
