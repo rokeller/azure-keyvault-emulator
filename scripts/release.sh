@@ -5,8 +5,8 @@ current_directory="$PWD"
 
 cd $(dirname $0)/..
 
-yarn install --frozen-lockfile
-yarn release
+pnpm install --frozen-lockfile
+pnpm release
 
 result=$?
 

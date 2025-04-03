@@ -30,6 +30,11 @@ namespace AzureKeyVaultEmulator.AcceptanceTests.Secrets
             Assert.Equal(secret1.Value.Properties.ExpiresOn, actualLatest.Value.Properties.ExpiresOn);
             Assert.Equal(secret1.Value.Properties.Version, actualLatest.Value.Properties.Version);
 
+            // This is ugly, but since granularity for timestamps is only seconds,
+            // for now let's just sleep for a second to make sure sorting of
+            // versions works.
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
             var secret2 = await CreateSecret(expectedName);
             actualLatest = await _secretClient.GetSecretAsync(expectedName);
             Assert.Equal(secret2.Value.Id, actualLatest.Value.Id);
