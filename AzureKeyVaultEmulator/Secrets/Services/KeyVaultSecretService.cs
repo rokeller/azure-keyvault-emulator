@@ -25,16 +25,24 @@ internal sealed class KeyVaultSecretService : IKeyVaultSecretService
         LoadFromStore();
     }
 
-    public SecretResponse Get(string name)
+    public IEnumerable<SecretResponse> Get(string name)
     {
-        secrets.TryGetValue(GetCacheId(name), out var found);
-
-        return found;
+        string cachePrefix = GetCacheIdPrefix(name);
+        foreach (KeyValuePair<string, SecretResponse> cacheItem in secrets)
+        {
+            if (cacheItem.Key.StartsWith(cachePrefix))
+            {
+                yield return cacheItem.Value;
+            }
+        }
     }
 
-    public SecretResponse Get(string name, string version)
+    public SecretResponse? Get(string name, string version)
     {
-        secrets.TryGetValue(GetCacheId(name, version), out var found);
+        if (!secrets.TryGetValue(GetCacheId(name, version), out var found))
+        {
+            return null;
+        }
 
         return found;
     }
@@ -54,30 +62,57 @@ internal sealed class KeyVaultSecretService : IKeyVaultSecretService
         {
             Id = secretUrl.Uri,
             Value = secret.Value,
-            Attributes = secret.SecretAttributes,
+            Attributes = secret.Attributes,
+            ContentType = secret.ContentType,
             Tags = secret.Tags
         };
 
-        string secretKey = GetCacheId(name);
-        string versionKey = GetCacheId(name, version);
-        secrets.AddOrUpdate(secretKey, response, (_, _) => response);
-        secrets.TryAdd(versionKey, response);
-
-        store.StoreObject(secretKey, response);
-        store.StoreObject(versionKey, response);
+        string cacheKey = GetCacheId(name, version);
+        secrets.AddOrUpdate(cacheKey, response, (_, _) => response);
+        store.StoreObject(cacheKey, response);
 
         return response;
     }
 
-    private static string GetCacheId(string name, string version = null)
+    public SecretResponse UpdateSecret(string name, string version, SecretResponse newSecret)
     {
-        return null == version ? name : $"{name}~{version}";
+        string cacheKey = GetCacheId(name, version);
+        if (!secrets.TryGetValue(GetCacheId(name, version), out var curSecret))
+        {
+            throw new InvalidOperationException("The secret version does not exist.");
+        }
+
+        var secret = newSecret with
+        {
+            Id = curSecret.Id
+        };
+
+        secrets.AddOrUpdate(cacheKey, secret, (_, _) => secret);
+        store.StoreObject(cacheKey, secret);
+
+        return secret;
+    }
+
+    private static string GetCacheId(string name, string version)
+    {
+        return $"{name}~{version}";
+    }
+
+    private static string GetCacheIdPrefix(string name)
+    {
+        return $"{name}~";
     }
 
     private void LoadFromStore()
     {
         foreach (KeyValuePair<string, SecretResponse> secret in store.ReadObjects())
         {
+            // Skip old secrets from store that do not have a version in the name.
+            if (secret.Key.IndexOf('~') < 0)
+            {
+                continue;
+            }
+
             secrets.TryAdd(secret.Key, secret.Value);
         }
     }

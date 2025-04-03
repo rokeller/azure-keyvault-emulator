@@ -1,14 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace AzureKeyVaultEmulator.Secrets.Models;
 
-public readonly struct SetSecretModel
+public readonly struct UpdateSecretModel
 {
-    [JsonPropertyName("value")]
-    [Required]
-    public string Value { get; init; }
-
     [JsonPropertyName("contentType")]
     public string ContentType { get; init; }
 

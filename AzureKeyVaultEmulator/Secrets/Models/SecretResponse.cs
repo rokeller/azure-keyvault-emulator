@@ -1,20 +1,23 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace AzureKeyVaultEmulator.Secrets.Models
+namespace AzureKeyVaultEmulator.Secrets.Models;
+
+public readonly struct SecretResponse
 {
-    public class SecretResponse
-    {
-        [JsonPropertyName("id")]
-        public Uri Id { get; set; }
+    [JsonPropertyName("id")]
+    public Uri Id { get; init; }
 
-        [JsonPropertyName("value")]
-        public string Value { get; set; }
+    [JsonPropertyName("value")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Value { get; init; }
 
-        [JsonPropertyName("attributes")]
-        public SecretAttributesModel Attributes { get; set; }
+    [JsonPropertyName("attributes")]
+    public SecretAttributesModel Attributes { get; init; }
 
-        [JsonPropertyName("tags")]
-        public object Tags { get; set; }
-    }
+    [JsonPropertyName("contentType")]
+    public string ContentType { get; init; }
+
+    [JsonPropertyName("tags")]
+    public object Tags { get; init; }
 }

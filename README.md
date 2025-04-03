@@ -28,9 +28,11 @@ for Encrypt, Decrypt, Wrap Key and Unwrap Key operations:
 
 ### Secrets
 
-- Set
+- Set Secret (Create new Secret Version)
 - Get Secret
 - Get Secret by Version
+- Get Secret Versions
+- Update Secret Version
 
 ## Requirements
 
