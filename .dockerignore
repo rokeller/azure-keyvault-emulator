@@ -11,3 +11,7 @@ Dockerfile*
 **/*.cmd
 **/*.sh
 global.json
+
+**/packages.lock.json
+**/appsettings.*.json
+!**/appsettings.Production.json
