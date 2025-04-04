@@ -14,5 +14,6 @@ WORKDIR /app
 
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 ENTRYPOINT ["dotnet", "AzureKeyVaultEmulator.dll"]
+VOLUME ["/app/.vault"]
 
 COPY --link --from=build /app/publish .
