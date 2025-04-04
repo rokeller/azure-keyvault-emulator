@@ -8,8 +8,7 @@ RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
 COPY . .
 RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         -c Release -o publish --no-restore && \
-    mkdir -p /app/publish/.vault && \
-    chown -R app:app /app/publish/.vault
+    mkdir -p /app/publish/.vault
 
 ########################################
 
@@ -20,4 +19,4 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 ENTRYPOINT ["dotnet", "AzureKeyVaultEmulator.dll"]
 VOLUME ["/app/.vault"]
 
-COPY --link --from=build /app/publish .
+COPY --chown=app:app --chmod=755 --link --from=build /app/publish .
