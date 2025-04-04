@@ -2,10 +2,14 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0-noble AS build
 WORKDIR /app
 
 COPY AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj ./AzureKeyVaultEmulator/
-RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj --use-lock-file --locked-mode
+RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
+        --use-lock-file --locked-mode
 
 COPY . .
-RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj -c Release -o publish --no-restore
+RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
+        -c Release -o publish --no-restore && \
+    mkdir -p /app/publish/.vault && \
+    chown -R app:app /app/publish/.vault
 
 ########################################
 
@@ -14,7 +18,6 @@ WORKDIR /app
 
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 ENTRYPOINT ["dotnet", "AzureKeyVaultEmulator.dll"]
-RUN mkdir .vault
 VOLUME ["/app/.vault"]
 
 COPY --link --from=build /app/publish .
