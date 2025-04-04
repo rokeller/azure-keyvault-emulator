@@ -7,6 +7,14 @@ which is no longer maintained by them - so I try to do that here.
 The Azure KeyVault Emulator helps emulating interactions with Azure KeyVault
 using the official Azure KeyVault clients/SDKs.
 
+## Running in container
+
+For container images, see [azure-keyvault-emulator on ghcr.io ![GitHub Release](https://img.shields.io/github/v/release/rokeller/azure-keyvault-emulator)](https://github.com/rokeller/azure-keyvault-emulator/pkgs/container/azure-keyvault-emulator)
+
+Don't forget to mount a volume to `/app/.vault` in the container to keep
+persisted keys and secrets.
+
+
 ## Supported Operations
 
 ### Keys
@@ -135,12 +143,10 @@ same compose file, a new OpenSSL certificate has to be generated:
 1. Add a service to docker-compose.yml for Azure KeyVault Emulator:
 
     ```
-    version: '3.9'
-    
     services:
       ...
       azure-keyvault-emulator:
-        image: basis-theory/azure-keyvault-emulator:latest
+        image: ghcr.io/rokeller/azure-keyvault-emulator:<specific-version>
         hostname: <emulator-hostname>.vault.azure.net
         ports:
           - 5001:5001
@@ -156,8 +162,6 @@ same compose file, a new OpenSSL certificate has to be generated:
 1. Modify the client application's entrypoint to add the self-signed certificate to the truststore. Example using docker-compose.yml to override the entrypoint:
 
     ```
-    version: '3.9'
-    
     services:
       my-awesome-keyvault-client:
         container_name: my-awesome-client
