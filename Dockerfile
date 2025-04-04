@@ -8,8 +8,7 @@ RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
 COPY . .
 RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         -c Release -o publish --no-restore && \
-    mkdir -p /app/publish/.vault && \
-    touch /app/publish/.vault/.ignore
+    mkdir -p /app/publish/.vault
 
 ########################################
 
