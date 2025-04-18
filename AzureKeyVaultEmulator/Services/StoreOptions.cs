@@ -1,4 +1,4 @@
-namespace AzureKeyVaultEmulator;
+namespace AzureKeyVaultEmulator.Services;
 
 internal sealed class StoreOptions
 {

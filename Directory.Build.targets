@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project>
+    <Target Name="PrepareOpenApiItems" DependsOnTargets="$(BeforeGenerateOpenApiCode)">
+        <PropertyGroup>
+            <NSwagControllerArgs>openapi2cscontroller</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /JsonLibrary:SystemTextJson</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /ControllerStyle:partial</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /UseActionResultType:true</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /GenerateModelValidationAttributes:true</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /GenerateJsonMethods:false</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /RequiredPropertiesMustBeDefined:true</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /GenerateOptionalPropertiesAsNullable:true</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /GenerateNullableReferenceTypes:true</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /GenerateOptionalParameters:false</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId</NSwagControllerArgs>
+            <NSwagControllerArgs>$(NSwagControllerArgs) /useCancellationToken:true</NSwagControllerArgs>
+        </PropertyGroup>
+
+        <ItemGroup>
+            <_PreparedOpenApiController Include="@(OpenApiController)">
+                <Namespace>$(RootNamespace).Controllers</Namespace>
+                <OutDir>Controllers</OutDir>
+                <OutFile>Controllers/Controllers.g.cs</OutFile>
+            </_PreparedOpenApiController>
+        </ItemGroup>
+
+        <ItemGroup>
+            <_PreparedOpenApiItem Include="@(_PreparedOpenApiController)">
+                <Args>$(NSwagControllerArgs) /Namespace:%(Namespace) /Input:%(Identity) /Output:%(OutFile)</Args>
+            </_PreparedOpenApiItem>
+        </ItemGroup>
+    </Target>
+
+    <Target Name="GenerateOpenApiCode" BeforeTargets="BeforeCompile"
+        DependsOnTargets="PrepareOpenApiItems"
+        Inputs="@(_PreparedOpenApiItem)"
+        Outputs="%(_PreparedOpenApiItem.OutFile)">
+        <Message Importance="High"
+            Text="Generate code for OpenAPI(s) @(_PreparedOpenApiItem) ..." />
+
+        <MakeDir Directories="%(_PreparedOpenApiItem.OutDir)" />
+        <!--
+        For help, execute
+        $(NSwagExe_Net80) help openapi2cscontroller
+
+        Or See
+        https://github.com/RicoSuter/NSwag/wiki/CSharpGeneratorBaseSettings
+        https://github.com/RicoSuter/NSwag/wiki/NSwag-Configuration-Document
+        -->
+        <Exec WorkingDirectory="$(ProjectDir)"
+            Command="$(NSwagExe_Net80) %(_PreparedOpenApiItem.Args)" />
+
+        <ItemGroup>
+            <Compile Include="%(_PreparedOpenApiItem.OutFile)" KeepDuplicates="false" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="CleanGeneratedOpenApiCode" BeforeTargets="AfterClean"
+        DependsOnTargets="PrepareOpenApiItems;$(BeforeCleanGeneratedOpenApiCode)">
+        <Delete Files="%(_PreparedOpenApiItem.OutFile)" />
+    </Target>
+</Project>
