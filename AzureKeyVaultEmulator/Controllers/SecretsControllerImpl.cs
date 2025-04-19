@@ -156,6 +156,7 @@ internal sealed class SecretsControllerImpl(
 
         return secretUrl.Uri;
     }
+
     private async static Task<ActionResult<SecretListResult>> ListSecretsAsync(
         List<SecretBundle> secrets,
         CancellationToken cancellationToken = default)

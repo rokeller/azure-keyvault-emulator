@@ -132,3 +132,8 @@ static Func<IServiceProvider, IStore<T>> UseStoreFactory<T>(
 
     return StoreFactory;
 }
+
+/// <summary>
+/// Helper class for testing.
+/// </summary>
+public partial class Emulator { }

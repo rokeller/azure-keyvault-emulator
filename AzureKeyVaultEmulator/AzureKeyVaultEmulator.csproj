@@ -20,6 +20,7 @@
     <Compile Remove="Keys/**" />
     <Compile Remove="Models/**" />
     <Compile Remove="Secrets/**" />
+    <InternalsVisibleTo Include="AzureKeyVaultEmulator.AcceptanceTests" />
   </ItemGroup>
 
   <Target Name="MergeOpenApiSpecs"
