@@ -31,7 +31,7 @@ internal sealed class SecretsControllerImpl(
             Id = id.ToString(),
             Value = body.Value,
             ContentType = body.ContentType,
-            Attributes = body.Attributes,
+            Attributes = Update(body.Attributes),
             Tags = body.Tags,
         };
 
@@ -82,14 +82,29 @@ internal sealed class SecretsControllerImpl(
         return bundle;
     }
 
-    public Task<ActionResult<SecretBundle>> UpdateSecretAsync(
+    public async Task<ActionResult<SecretBundle>> UpdateSecretAsync(
         string secret_name,
         string secret_version,
         string api_version,
         SecretUpdateParameters body,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        SecretBundle? bundle = await store
+            .ReadObjectAsync(secret_name, secret_version, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        if (null == bundle)
+        {
+            return new NotFoundResult();
+        }
+
+        bundle.ContentType = body.ContentType ?? bundle.ContentType;
+        bundle.Attributes = Update(body.Attributes ?? bundle.Attributes);
+        bundle.Tags = body.Tags ?? bundle.Tags;
+
+        await store.StoreObjectAsync(secret_name, secret_version, bundle, cancellationToken);
+
+        return bundle;
     }
 
     public async Task<ActionResult<SecretListResult>> GetSecretsAsync(
@@ -180,5 +195,16 @@ internal sealed class SecretsControllerImpl(
         {
             Value = values.ToList(),
         };
+    }
+
+    private static SecretAttributes Update(SecretAttributes? attributes)
+    {
+        attributes ??= new();
+
+        int now = DateTimeOffset.UtcNow.ToUnixSeconds();
+        attributes.Created ??= now;
+        attributes.Updated = now;
+
+        return attributes;
     }
 }
