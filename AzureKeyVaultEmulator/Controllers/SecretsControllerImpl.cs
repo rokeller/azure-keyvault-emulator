@@ -99,7 +99,7 @@ internal sealed class SecretsControllerImpl(
         }
 
         bundle.ContentType = body.ContentType ?? bundle.ContentType;
-        bundle.Attributes = Update(body.Attributes ?? bundle.Attributes);
+        bundle.Attributes = Update(body.Attributes, bundle.Attributes);
         bundle.Tags = body.Tags ?? bundle.Tags;
 
         await store.StoreObjectAsync(secret_name, secret_version, bundle, cancellationToken);
@@ -197,14 +197,16 @@ internal sealed class SecretsControllerImpl(
         };
     }
 
-    private static SecretAttributes Update(SecretAttributes? attributes)
+    private static SecretAttributes Update(
+        SecretAttributes? newest,
+        SecretAttributes? oldest = null)
     {
-        attributes ??= new();
+        SecretAttributes newAttrs = newest ?? oldest ?? new();
 
         int now = DateTimeOffset.UtcNow.ToUnixSeconds();
-        attributes.Created ??= now;
-        attributes.Updated = now;
+        newAttrs.Created = oldest?.Created ?? now;
+        newAttrs.Updated = now;
 
-        return attributes;
+        return newAttrs;
     }
 }

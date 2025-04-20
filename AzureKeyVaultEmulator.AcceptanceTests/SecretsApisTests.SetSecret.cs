@@ -46,8 +46,8 @@ partial class SecretsApisTests
         Assert.Equal("local", createdSecret.Properties.Tags["environment"]);
         Assert.Equal("true", createdSecret.Properties.Tags["testing"]);
 
-        AssertInLastTwoSeconds(createdSecret.Properties.CreatedOn);
-        AssertInLastTwoSeconds(createdSecret.Properties.UpdatedOn);
+        Utils.AssertInLastTwoSeconds(createdSecret.Properties.CreatedOn);
+        Utils.AssertInLastTwoSeconds(createdSecret.Properties.UpdatedOn);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ partial class SecretsApisTests
         Assert.NotNull(createdSecret.Properties.Version);
         Assert.Empty(createdSecret.Properties.Tags);
 
-        AssertInLastTwoSeconds(createdSecret.Properties.CreatedOn);
-        AssertInLastTwoSeconds(createdSecret.Properties.UpdatedOn);
+        Utils.AssertInLastTwoSeconds(createdSecret.Properties.CreatedOn);
+        Utils.AssertInLastTwoSeconds(createdSecret.Properties.UpdatedOn);
     }
 }

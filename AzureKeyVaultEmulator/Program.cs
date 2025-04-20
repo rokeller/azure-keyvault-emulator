@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using AzureKeyVaultEmulator.Controllers;
+using AzureKeyVaultEmulator.Converters;
 using AzureKeyVaultEmulator.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -18,11 +20,19 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services
     .Configure<StoreOptions>(builder.Configuration.GetSection("Store"))
     .AddControllers()
-    .AddJsonOptions(o =>
+    .AddJsonOptions(options =>
     {
-        o.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+
+        IList<JsonConverter> converters = options.JsonSerializerOptions.Converters;
+        converters.Add(new EnumStringValueConverter());
+        converters.Add(new KeyCreateParametersConverter());
+        converters.Add(new KeyBundleConverter());
+        converters.Add(new KeyOperationsParametersConverter());
     })
     .Services
+    .AddSingleton<IEnumToStringConvertible<Key_ops>>(EnumStringValueConverter.Create<Key_ops>())
+    .AddSingleton<IEnumToStringConvertible<key_ops>>(EnumStringValueConverter.Create<key_ops>())
 
     .AddEndpointsApiExplorer()
     .AddSwaggerGen(c =>
@@ -92,7 +102,7 @@ builder.Services
                 context.Response.Headers["WWW-Authenticate"] =
                     $"Bearer {challengeAuthorization}, scope=\"{scope}\", resource=\"https://vault.azure.net\"";
                 return Task.CompletedTask;
-            }
+            },
         };
     }).Services
 

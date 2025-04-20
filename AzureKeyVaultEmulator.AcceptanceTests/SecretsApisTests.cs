@@ -4,7 +4,6 @@ using Azure;
 using Azure.Core.Pipeline;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Xunit;
 
 namespace AzureKeyVaultEmulator.AcceptanceTests;
 
@@ -47,14 +46,5 @@ public sealed partial class SecretsApisTests : IDisposable
                 },
             },
         });
-    }
-
-    private static void AssertInLastTwoSeconds(DateTimeOffset? timestamp)
-    {
-        Assert.True(timestamp.HasValue);
-
-        DateTimeOffset low = DateTimeOffset.Now.AddSeconds(-2);
-        DateTimeOffset high = DateTimeOffset.Now;
-        Assert.InRange(timestamp.Value, low, high);
     }
 }

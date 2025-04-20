@@ -29,7 +29,6 @@ partial class KeysController
     {
         return _implementation.GetKeyAsync(key_name, null!, api_version, cancellationToken);
     }
-
 }
 
 /// <summary>
