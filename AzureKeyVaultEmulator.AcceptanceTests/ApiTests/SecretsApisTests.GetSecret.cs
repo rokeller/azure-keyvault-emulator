@@ -13,49 +13,49 @@ partial class SecretsApisTests
     {
         string expectedName = Guid.NewGuid().ToString();
 
-        Response<KeyVaultSecret> secret1 = await CreateSecretAsync(expectedName);
+        KeyVaultSecret secret1 = await CreateSecretAsync(expectedName);
         Response<KeyVaultSecret> actualLatest = await client.GetSecretAsync(expectedName);
-        Assert.Equal(secret1.Value.Id, actualLatest.Value.Id);
-        Assert.Equal(secret1.Value.Value, actualLatest.Value.Value);
-        Assert.Equal(secret1.Value.Properties.Enabled, actualLatest.Value.Properties.Enabled);
-        Assert.Equal(secret1.Value.Properties.NotBefore, actualLatest.Value.Properties.NotBefore);
-        Assert.Equal(secret1.Value.Properties.ExpiresOn, actualLatest.Value.Properties.ExpiresOn);
-        Assert.Equal(secret1.Value.Properties.Version, actualLatest.Value.Properties.Version);
+        Assert.Equal(secret1.Id, actualLatest.Value.Id);
+        Assert.Equal(secret1.Value, actualLatest.Value.Value);
+        Assert.Equal(secret1.Properties.Enabled, actualLatest.Value.Properties.Enabled);
+        Assert.Equal(secret1.Properties.NotBefore, actualLatest.Value.Properties.NotBefore);
+        Assert.Equal(secret1.Properties.ExpiresOn, actualLatest.Value.Properties.ExpiresOn);
+        Assert.Equal(secret1.Properties.Version, actualLatest.Value.Properties.Version);
 
-        Response<KeyVaultSecret> secret2 = await CreateSecretAsync(expectedName);
+        KeyVaultSecret secret2 = await CreateSecretAsync(expectedName);
         actualLatest = await client.GetSecretAsync(expectedName);
-        Assert.Equal(secret2.Value.Id, actualLatest.Value.Id);
-        Assert.Equal(secret2.Value.Value, actualLatest.Value.Value);
-        Assert.Equal(secret2.Value.Properties.Enabled, actualLatest.Value.Properties.Enabled);
-        Assert.Equal(secret2.Value.Properties.NotBefore, actualLatest.Value.Properties.NotBefore);
-        Assert.Equal(secret2.Value.Properties.ExpiresOn, actualLatest.Value.Properties.ExpiresOn);
-        Assert.Equal(secret2.Value.Properties.Version, actualLatest.Value.Properties.Version);
+        Assert.Equal(secret2.Id, actualLatest.Value.Id);
+        Assert.Equal(secret2.Value, actualLatest.Value.Value);
+        Assert.Equal(secret2.Properties.Enabled, actualLatest.Value.Properties.Enabled);
+        Assert.Equal(secret2.Properties.NotBefore, actualLatest.Value.Properties.NotBefore);
+        Assert.Equal(secret2.Properties.ExpiresOn, actualLatest.Value.Properties.ExpiresOn);
+        Assert.Equal(secret2.Properties.Version, actualLatest.Value.Properties.Version);
     }
 
     [Fact]
     public async Task GetSecretByVersionWorks()
     {
         string expectedName = Guid.NewGuid().ToString();
-        Response<KeyVaultSecret> expectedSecret = await CreateSecretAsync(expectedName);
+        KeyVaultSecret expectedSecret = await CreateSecretAsync(expectedName);
 
         Response<KeyVaultSecret> actualLatestSecret = await client
-            .GetSecretAsync(expectedName, expectedSecret.Value.Properties.Version);
-        Assert.Equal(expectedSecret.Value.Id, actualLatestSecret.Value.Id);
-        Assert.Equal(expectedSecret.Value.Properties.Version, actualLatestSecret.Value.Properties.Version);
+            .GetSecretAsync(expectedName, expectedSecret.Properties.Version);
+        Assert.Equal(expectedSecret.Id, actualLatestSecret.Value.Id);
+        Assert.Equal(expectedSecret.Properties.Version, actualLatestSecret.Value.Properties.Version);
     }
 
     [Fact]
     public async Task GetSecretByOlderVersionWorks()
     {
         string expectedName = Guid.NewGuid().ToString();
-        Response<KeyVaultSecret> expected = await CreateSecretAsync(expectedName);
+        KeyVaultSecret expected = await CreateSecretAsync(expectedName);
 
         await CreateSecretAsync(expectedName);
 
         Response<KeyVaultSecret> actualLatest = await client
-            .GetSecretAsync(expectedName, expected.Value.Properties.Version);
-        Assert.Equal(expected.Value.Id, actualLatest.Value.Id);
-        Assert.Equal(expected.Value.Properties.Version, actualLatest.Value.Properties.Version);
+            .GetSecretAsync(expectedName, expected.Properties.Version);
+        Assert.Equal(expected.Id, actualLatest.Value.Id);
+        Assert.Equal(expected.Properties.Version, actualLatest.Value.Properties.Version);
     }
 
     [Fact]

@@ -81,4 +81,22 @@ partial class SecretsApisTests
                         new Uri($"https://localhost.vault.azure.net/secrets/{name}/{version}"))));
         Assert.Equal(404, ex.Status);
     }
+
+    [Fact]
+    public async Task UpdateOfLatestVersionAffectsGetWithoutVersionToo()
+    {
+        string name = Guid.NewGuid().ToString();
+        KeyVaultSecret initial = await CreateSecretAsync(name);
+        Assert.Null(initial.Properties.ContentType);
+        string version = initial.Properties.Version;
+
+        await client.UpdateSecretPropertiesAsync(new(initial.Id)
+        {
+            ContentType = "text/plain",
+        });
+
+        KeyVaultSecret updated = await client.GetSecretAsync(name);
+        Assert.Equal("text/plain", updated.Properties.ContentType);
+        Assert.Equal(version, updated.Properties.Version);
+    }
 }

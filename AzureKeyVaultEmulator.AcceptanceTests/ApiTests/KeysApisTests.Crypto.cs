@@ -72,6 +72,49 @@ partial class KeysApisTests
         return WrapUnwrapWorks(KeyWrapAlgorithm.RsaOaep256);
     }
 
+    [Theory]
+    [InlineData("ES256")]
+    [InlineData("ES384")]
+    [InlineData("ES512")]
+    public async Task SignVerifyWorksForEllipticCurveKey(string algName)
+    {
+        string name = $"sign-verify-ec-{algName}-{Guid.NewGuid()}";
+        string dataToSign = $"data-to-sign-with-ec-{algName}";
+        byte[] data = Encoding.UTF8.GetBytes(dataToSign);
+        SignatureAlgorithm alg = new(algName);
+        KeyVaultKey key = await CreateEcKeyAsync(name);
+        CryptographyClient cryptoClient = CreateCryptoClient(key);
+
+        SignResult signRes = await cryptoClient.SignDataAsync(alg, data);
+        Assert.Equal(key.Key.Id, signRes.KeyId);
+
+        VerifyResult verifyRes = await cryptoClient.VerifyDataAsync(alg, data, signRes.Signature);
+        Assert.True(verifyRes.IsValid);
+    }
+
+    [Theory]
+    [InlineData("RS256")]
+    [InlineData("RS384")]
+    [InlineData("RS512")]
+    [InlineData("PS256")]
+    [InlineData("PS384")]
+    [InlineData("PS512")]
+    public async Task SignVerifyWorksForRsaKey(string algName)
+    {
+        string name = $"sign-verify-rsa-{algName}-{Guid.NewGuid()}";
+        string dataToSign = $"data-to-sign-with-rsa-{algName}";
+        byte[] data = Encoding.UTF8.GetBytes(dataToSign);
+        SignatureAlgorithm alg = new(algName);
+        KeyVaultKey key = await CreateRsaKeyAsync(name);
+        CryptographyClient cryptoClient = CreateCryptoClient(key);
+
+        SignResult signRes = await cryptoClient.SignDataAsync(alg, data);
+        Assert.Equal(key.Key.Id, signRes.KeyId);
+
+        VerifyResult verifyRes = await cryptoClient.VerifyDataAsync(alg, data, signRes.Signature);
+        Assert.True(verifyRes.IsValid);
+    }
+
     private async Task EncryptDecryptWorks(
         string alg,
         Func<byte[], EncryptParameters> createEncryptParams,

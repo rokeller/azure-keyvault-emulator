@@ -29,6 +29,16 @@ internal sealed class KeysControllerImpl(
         string api_version,
         CancellationToken cancellationToken = default)
     {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/backup-key/backup-key?view=rest-keyvault-keys-7.4&tabs=HTTP
+        throw new NotSupportedException();
+    }
+
+    public Task<ActionResult<KeyBundle>> RestoreKeyAsync(
+        string api_version,
+        KeyRestoreParameters body,
+        CancellationToken cancellationToken = default)
+    {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/restore-key/restore-key?view=rest-keyvault-keys-7.4&tabs=HTTP
         throw new NotSupportedException();
     }
 
@@ -98,14 +108,6 @@ internal sealed class KeysControllerImpl(
         return bundle;
     }
 
-    public Task<ActionResult<KeyRotationPolicy>> GetKeyRotationPolicyAsync(
-        string key_name,
-        string api_version,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotSupportedException();
-    }
-
     public async Task<ActionResult<KeyListResult>> GetKeysAsync(
         int? maxresults,
         string api_version,
@@ -139,13 +141,33 @@ internal sealed class KeysControllerImpl(
             .ConfigureAwait(ConfigureAwaitOptions.None);
     }
 
-    public Task<ActionResult<KeyBundle>> ImportKeyAsync(
+    public async Task<ActionResult<KeyBundle>> ImportKeyAsync(
         string key_name,
         string api_version,
         KeyImportParameters body,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        string version = Guid.NewGuid().ToString("N");
+        Uri id = GetKeyUrl(key_name, version);
+        KeyAttributes attributes = Update(body.Attributes);
+        KeyBundle key = new()
+        {
+            Key = body.Key,
+            Attributes = attributes,
+            Tags = body.Tags,
+            Managed = false,
+            Release_policy = body.Release_policy,
+        };
+        key.Key.Kid = GetKeyUrl(key_name, version).ToString();
+
+        await store.StoreObjectAsync(key_name,
+                                     version,
+                                     isLatestVersion: true,
+                                     key,
+                                     cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        return key;
     }
 
     public Task<ActionResult<KeyReleaseResult>> ReleaseAsync(
@@ -155,14 +177,7 @@ internal sealed class KeysControllerImpl(
         KeyReleaseParameters body,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
-    }
-
-    public Task<ActionResult<KeyBundle>> RestoreKeyAsync(
-        string api_version,
-        KeyRestoreParameters body,
-        CancellationToken cancellationToken = default)
-    {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/release/release?view=rest-keyvault-keys-7.4&tabs=HTTP
         throw new NotSupportedException();
     }
 
@@ -171,6 +186,7 @@ internal sealed class KeysControllerImpl(
         string api_version,
         CancellationToken cancellationToken = default)
     {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/rotate-key/rotate-key?view=rest-keyvault-keys-7.4&tabs=HTTP
         throw new NotSupportedException();
     }
 
@@ -204,12 +220,22 @@ internal sealed class KeysControllerImpl(
         return bundle;
     }
 
+    public Task<ActionResult<KeyRotationPolicy>> GetKeyRotationPolicyAsync(
+        string key_name,
+        string api_version,
+        CancellationToken cancellationToken = default)
+    {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/get-key-rotation-policy/get-key-rotation-policy?view=rest-keyvault-keys-7.4&tabs=HTTP
+        throw new NotSupportedException();
+    }
+
     public Task<ActionResult<KeyRotationPolicy>> UpdateKeyRotationPolicyAsync(
         string key_name,
         string api_version,
         KeyRotationPolicy body,
         CancellationToken cancellationToken = default)
     {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/update-key-rotation-policy/update-key-rotation-policy?view=rest-keyvault-keys-7.4&tabs=HTTP
         throw new NotSupportedException();
     }
 
@@ -278,24 +304,40 @@ internal sealed class KeysControllerImpl(
         return DecryptAsync(key_name, key_version, api_version, body, cancellationToken);
     }
 
-    public Task<ActionResult<KeyOperationResult>> SignAsync(
+    public async Task<ActionResult<KeyOperationResult>> SignAsync(
         string key_name,
         string key_version,
         string api_version,
         KeySignParameters body,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        if (null == bundle || null == bundle.Key)
+        {
+            return new NotFoundResult();
+        }
+
+        return CryptoService.Sign(body, bundle.Key);
     }
 
-    public Task<ActionResult<KeyVerifyResult>> VerifyAsync(
+    public async Task<ActionResult<KeyVerifyResult>> VerifyAsync(
         string key_name,
         string key_version,
         string api_version,
         KeyVerifyParameters body,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        if (null == bundle || null == bundle.Key)
+        {
+            return new NotFoundResult();
+        }
+
+        return CryptoService.Verify(body, bundle.Key);
     }
 
     private Uri GetKeyUrl(string key_name, string key_version)

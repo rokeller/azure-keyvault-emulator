@@ -72,4 +72,22 @@ partial class KeysApisTests
                         new Uri($"https://localhost.vault.azure.net/keys/{name}/{version}"))));
         Assert.Equal(404, ex.Status);
     }
+
+    [Fact]
+    public async Task UpdateOfLatestVersionAffectsGetWithoutVersionToo()
+    {
+        string name = Guid.NewGuid().ToString();
+        KeyVaultKey initial = await CreateKeyAsync(name);
+        Assert.True(initial.Properties.Enabled);
+        string version = initial.Properties.Version;
+
+        await client.UpdateKeyPropertiesAsync(new(initial.Id)
+        {
+            Enabled = false,
+        });
+
+        KeyVaultKey updated = await client.GetKeyAsync(name);
+        Assert.False(updated.Properties.Enabled);
+        Assert.Equal(version, updated.Properties.Version);
+    }
 }

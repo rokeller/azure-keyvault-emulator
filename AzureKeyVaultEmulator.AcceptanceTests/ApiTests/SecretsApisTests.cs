@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Azure;
 using Azure.Core.Pipeline;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -30,9 +29,9 @@ public sealed partial class SecretsApisTests : IDisposable
         ((IDisposable)factory).Dispose();
     }
 
-    private async Task<Response<KeyVaultSecret>> CreateSecretAsync(string name)
+    private async Task<KeyVaultSecret> CreateSecretAsync(string name)
     {
-        return await client.SetSecretAsync(new KeyVaultSecret(name, Guid.NewGuid().ToString())
+        return (await client.SetSecretAsync(new KeyVaultSecret(name, Guid.NewGuid().ToString())
         {
             Properties =
             {
@@ -45,6 +44,6 @@ public sealed partial class SecretsApisTests : IDisposable
                     {"testing", "true"},
                 },
             },
-        });
+        })).Value;
     }
 }

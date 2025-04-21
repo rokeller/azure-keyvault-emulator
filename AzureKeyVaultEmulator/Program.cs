@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using AzureKeyVaultEmulator.Controllers;
 using AzureKeyVaultEmulator.Converters;
+using AzureKeyVaultEmulator.Middleware;
 using AzureKeyVaultEmulator.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -82,6 +83,7 @@ builder.Services
     .AddScoped<IRNGController, RNGControllerImpl>()
     .AddSingleton(UseStoreFactory<SecretBundle>("secrets"))
     .AddSingleton(UseStoreFactory<KeyBundle>("keys"))
+    .AddTransient<RemoveDoubleSlashMiddleware>()
     ;
 
 using WebApplication app = builder.Build();
@@ -91,6 +93,7 @@ if (app.Environment.EnvironmentName == "Development")
     app.UseDeveloperExceptionPage();
 }
 
+app.UseMiddleware<RemoveDoubleSlashMiddleware>();
 app.UseRouting();
 
 app.UseAuthentication();

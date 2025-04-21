@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Azure.Core.Pipeline;
@@ -13,14 +14,16 @@ public sealed partial class KeysApisTests : IDisposable
     private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly KeyClient client;
+    private readonly HttpClient httpClient;
     private readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
 
     public KeysApisTests()
     {
         factory.ClientOptions.BaseAddress = new("https://localhost.vault.azure.net/");
+        httpClient = factory.CreateClient();
         KeyClientOptions options = new()
         {
-            Transport = new HttpClientTransport(factory.CreateClient()),
+            Transport = new HttpClientTransport(httpClient),
             RetryPolicy = new RetryPolicy(maxRetries: 0),
         };
 
@@ -67,6 +70,14 @@ public sealed partial class KeysApisTests : IDisposable
     private async Task<KeyVaultKey> CreateRsaKeyAsync(string name)
     {
         return (await client.CreateKeyAsync(name, KeyType.Rsa, new()
+        {
+            Enabled = true,
+        })).Value;
+    }
+
+    private async Task<KeyVaultKey> CreateEcKeyAsync(string name)
+    {
+        return (await client.CreateKeyAsync(name, KeyType.Ec, new()
         {
             Enabled = true,
         })).Value;
