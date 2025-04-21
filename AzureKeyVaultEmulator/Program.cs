@@ -13,7 +13,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.OpenApi.Models;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +24,9 @@ builder.Services
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 
         IList<JsonConverter> converters = options.JsonSerializerOptions.Converters;
+        // Add some custom converters to help with conversion of some types that
+        // are otherwise difficult / impossible to convert with the code generated
+        // for the OpenAPI spec.
         converters.Add(new EnumStringValueConverter());
         converters.Add(new KeyCreateParametersConverter());
         converters.Add(new KeyBundleConverter());
@@ -33,40 +35,6 @@ builder.Services
     .Services
     .AddSingleton<IEnumToStringConvertible<Key_ops>>(EnumStringValueConverter.Create<Key_ops>())
     .AddSingleton<IEnumToStringConvertible<key_ops>>(EnumStringValueConverter.Create<key_ops>())
-
-    .AddEndpointsApiExplorer()
-    .AddSwaggerGen(c =>
-    {
-        c.SwaggerDoc("v1", new OpenApiInfo
-        {
-            Title = "Azure Key Vault Emulator",
-        });
-        c.AddSecurityDefinition("JWT", new OpenApiSecurityScheme
-        {
-            Name = "Authorization",
-            In = ParameterLocation.Header,
-            Type = SecuritySchemeType.Http,
-            Description = "JWT Authorization header using the Bearer scheme. " +
-                "Use 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws'",
-            Scheme = JwtBearerDefaults.AuthenticationScheme,
-        });
-        c.AddSecurityRequirement(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "JWT",
-                    },
-                },
-                Array.Empty<string>()
-            }
-        });
-        string filePath = Path.Combine(
-            AppContext.BaseDirectory, "AzureKeyVaultEmulator.xml");
-        c.IncludeXmlComments(filePath, true);
-    })
 
     .AddAuthentication(options =>
     {
@@ -77,12 +45,14 @@ builder.Services
     {
         options.TokenValidationParameters = new()
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = false,
+            RequireAudience = false,
+            RequireExpirationTime = false,
             RequireSignedTokens = false,
-            ValidateIssuerSigningKey = false,
             TryAllIssuerSigningKeys = false,
+            ValidateAudience = false,
+            ValidateIssuer = false,
+            ValidateLifetime = false,
+            ValidateIssuerSigningKey = false,
             SignatureValidator = (token, _) =>
             {
                 return new JsonWebToken(token);
@@ -116,9 +86,10 @@ builder.Services
 
 using WebApplication app = builder.Build();
 
-app.UseDeveloperExceptionPage();
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.EnvironmentName == "Development")
+{
+    app.UseDeveloperExceptionPage();
+}
 
 app.UseRouting();
 

@@ -13,13 +13,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.*" />
     <PackageReference Include="NSwag.MSBuild" Version="14.*" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="8.*" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Keys/**" />
-    <Compile Remove="Models/**" />
-    <Compile Remove="Secrets/**" />
     <InternalsVisibleTo Include="AzureKeyVaultEmulator.AcceptanceTests" />
   </ItemGroup>
 
