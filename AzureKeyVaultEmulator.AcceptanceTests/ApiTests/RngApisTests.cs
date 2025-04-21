@@ -6,11 +6,11 @@ using Azure.Security.KeyVault.Keys;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests;
+namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
 
 public sealed class RngApisTests : IDisposable
 {
-    private readonly WebApplicationFactory<Emulator> factory = new();
+    private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly KeyClient client;
 

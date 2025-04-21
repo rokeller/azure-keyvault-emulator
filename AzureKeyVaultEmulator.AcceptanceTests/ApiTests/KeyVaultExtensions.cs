@@ -1,7 +1,7 @@
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests;
+namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
 
 internal static class KeyVaultExtensions
 {

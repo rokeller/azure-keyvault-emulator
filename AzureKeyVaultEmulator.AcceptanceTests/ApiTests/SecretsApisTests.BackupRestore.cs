@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Azure;
 using Xunit;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests;
+namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
 
 partial class SecretsApisTests
 {

@@ -5,11 +5,11 @@ using Azure.Core.Pipeline;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests;
+namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
 
 public sealed partial class SecretsApisTests : IDisposable
 {
-    private readonly WebApplicationFactory<Emulator> factory = new();
+    private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly SecretClient client;
 

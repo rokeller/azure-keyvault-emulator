@@ -6,11 +6,11 @@ using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Keys.Cryptography;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests;
+namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
 
 public sealed partial class KeysApisTests : IDisposable
 {
-    private readonly WebApplicationFactory<Emulator> factory = new();
+    private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly KeyClient client;
     private readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
