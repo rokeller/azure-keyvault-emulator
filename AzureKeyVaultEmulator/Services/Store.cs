@@ -30,8 +30,8 @@ internal sealed class Store<T> : IStore<T>
 
     public Task<List<T>> ListObjectsAsync(CancellationToken cancellationToken)
     {
-        FileInfo[] files = root.GetFiles("*.json", SearchOption.TopDirectoryOnly);
-        return ReadObjectsAsync(files, cancellationToken)!;
+        FileInfo[] files = root.GetFiles("*.latest", SearchOption.TopDirectoryOnly);
+        return ReadRedirectedObjectsAsync(files, cancellationToken)!;
     }
 
     public async Task<T?> ReadObjectAsync(
@@ -45,13 +45,23 @@ internal sealed class Store<T> : IStore<T>
             return default;
         }
 
-        using FileStream fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
-        return await JsonSerializer
-            .DeserializeAsync<T>(fs, readOptions, cancellationToken)
-            .ConfigureAwait(false);
+        if (null == version)
+        {
+            return await ReadRedirectedObjectAsync(file, cancellationToken)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+        }
+        else
+        {
+            using FileStream fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+            return await JsonSerializer
+                .DeserializeAsync<T>(fs, readOptions, cancellationToken)
+                .ConfigureAwait(false);
+        }
     }
 
-    public Task<List<T>?> ListObjectVersionsAsync(string key, CancellationToken cancellationToken)
+    public Task<List<T>?> ListObjectVersionsAsync(
+        string key,
+        CancellationToken cancellationToken)
     {
         DirectoryInfo versionsDir = GetDirForObjectVersions(key);
         if (!versionsDir.Exists)
@@ -65,24 +75,35 @@ internal sealed class Store<T> : IStore<T>
 
     public async Task StoreObjectAsync(
         string key,
-        string? version,
+        string version,
+        bool isLatestVersion,
         T obj,
         CancellationToken cancellationToken)
     {
         FileInfo file = GetFileForObject(key, version);
         file.Directory!.Create();
-        using FileStream fs = File.Open(file.FullName, FileMode.Create);
-        using Utf8JsonWriter utf8JsonWriter = new(fs, new JsonWriterOptions
         {
+            using FileStream fs = File.Open(file.FullName, FileMode.Create);
+            using Utf8JsonWriter utf8JsonWriter = new(fs, new JsonWriterOptions
+            {
 #if DEBUG
-            Indented = false,
+                Indented = true,
+#else
+                Indented = false,
 #endif
-        });
-        JsonSerializer.Serialize(utf8JsonWriter, obj, writeOptions);
+            });
+            JsonSerializer.Serialize(utf8JsonWriter, obj, writeOptions);
 
-        // Flush the writer to ensure data is written to the file
-        await utf8JsonWriter.FlushAsync(CancellationToken.None)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            // Flush the writer to ensure data is written to the file
+            await utf8JsonWriter.FlushAsync(CancellationToken.None)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+        }
+
+        if (isLatestVersion)
+        {
+            // Update the 'latest' redirect to point to this version.
+            await UpdateLatestAsync(key, version).ConfigureAwait(ConfigureAwaitOptions.None);
+        }
     }
 
     public Task DeleteObjectAsync(
@@ -98,7 +119,9 @@ internal sealed class Store<T> : IStore<T>
         return Task.CompletedTask;
     }
 
-    private async Task<T> ReadObjectAsync(FileInfo file, CancellationToken cancellationToken)
+    private async Task<T> ReadObjectAsync(
+        FileInfo file,
+        CancellationToken cancellationToken)
     {
         using FileStream fs = File.Open(file.FullName, FileMode.Open);
         // We don't allow storing null values, so the deserializer should never
@@ -106,13 +129,52 @@ internal sealed class Store<T> : IStore<T>
         return (await JsonSerializer.DeserializeAsync<T>(fs, readOptions, cancellationToken))!;
     }
 
-    private async Task<List<T>?> ReadObjectsAsync(FileInfo[] files, CancellationToken cancellationToken)
+    private async Task<T?> ReadRedirectedObjectAsync(
+        FileInfo redirectingFile,
+        CancellationToken cancellationToken)
+    {
+        using StreamReader reader = new(redirectingFile.FullName);
+        string version = await reader.ReadToEndAsync(cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        string key = Path.GetFileNameWithoutExtension(redirectingFile.Name);
+        FileInfo versionFile = GetFileForObject(key, version);
+
+        return await ReadObjectAsync(versionFile, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+    }
+
+    private async Task<List<T>?> ReadRedirectedObjectsAsync(
+        FileInfo[] files,
+        CancellationToken cancellationToken)
     {
         T[] result = new T[files.Length];
-        await Parallel.ForAsync(0, files.Length, cancellationToken, async (index, cancellationToken) =>
+
+        async ValueTask ReadAsync(int index, CancellationToken cancellationToken)
         {
-            result[index] = await ReadObjectAsync(files[index], cancellationToken);
-        });
+            T? item = await ReadRedirectedObjectAsync(files[index], cancellationToken)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+            result[index] = item!;
+        }
+        await Parallel.ForAsync(0, files.Length, cancellationToken, ReadAsync)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        return result.ToList();
+    }
+
+    private async Task<List<T>?> ReadObjectsAsync(
+        FileInfo[] files,
+        CancellationToken cancellationToken)
+    {
+        T[] result = new T[files.Length];
+
+        async ValueTask ReadAsync(int index, CancellationToken cancellationToken)
+        {
+            result[index] = await ReadObjectAsync(files[index], cancellationToken)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+        }
+        await Parallel.ForAsync(0, files.Length, cancellationToken, ReadAsync)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return result.ToList();
     }
@@ -122,7 +184,7 @@ internal sealed class Store<T> : IStore<T>
         FileInfo file;
         if (null == version)
         {
-            file = new(Path.Combine(root.FullName, key + ".json"));
+            file = new(Path.Combine(root.FullName, key + ".latest"));
         }
         else
         {
@@ -135,5 +197,23 @@ internal sealed class Store<T> : IStore<T>
     private DirectoryInfo GetDirForObjectVersions(string key)
     {
         return new(Path.Combine(root.FullName, key));
+    }
+
+    private async Task UpdateLatestAsync(
+        string key,
+        string version)
+    {
+        // Write the latest version into a temp file, then move the temp file.
+        FileInfo tempFile = new(Path.GetTempFileName());
+        {
+            using FileStream fs = File.Open(tempFile.FullName, FileMode.Create);
+            using StreamWriter writer = new(fs);
+
+            await writer.WriteAsync(version).ConfigureAwait(ConfigureAwaitOptions.None);
+            await writer.FlushAsync(default);
+        }
+
+        FileInfo targetFile = GetFileForObject(key, null);
+        tempFile.MoveTo(targetFile.FullName, overwrite: true);
     }
 }

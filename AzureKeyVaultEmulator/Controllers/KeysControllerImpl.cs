@@ -51,11 +51,12 @@ internal sealed class KeysControllerImpl(
             Release_policy = body.Release_policy,
         };
 
-        Task storeVersion = store.StoreObjectAsync(key_name, version, key, cancellationToken);
-        Task storeLatest = store.StoreObjectAsync(key_name, null, key, cancellationToken);
-
-        await storeVersion.ConfigureAwait(ConfigureAwaitOptions.None);
-        await storeLatest.ConfigureAwait(ConfigureAwaitOptions.None);
+        await store.StoreObjectAsync(key_name,
+                                     version,
+                                     isLatestVersion: true,
+                                     key,
+                                     cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return key;
     }
@@ -193,7 +194,12 @@ internal sealed class KeysControllerImpl(
         bundle.Tags = body.Tags ?? bundle.Tags;
         bundle.Release_policy = body.Release_policy ?? bundle.Release_policy;
 
-        await store.StoreObjectAsync(key_name, key_version, bundle, cancellationToken);
+        await store.StoreObjectAsync(key_name,
+                                     key_version,
+                                     isLatestVersion: false,
+                                     bundle,
+                                     cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return bundle;
     }
@@ -437,7 +443,7 @@ internal sealed class KeysControllerImpl(
     {
         // TODO: implement paging
         KeyItem[] values = new KeyItem[keys.Count];
-        await Parallel.ForAsync(0, keys.Count, cancellationToken, (index, cancellationToken) =>
+        ValueTask Convert(int index, CancellationToken cancellationToken)
         {
             values[index] = new()
             {
@@ -447,7 +453,9 @@ internal sealed class KeysControllerImpl(
                 Managed = keys[index].Managed,
             };
             return ValueTask.CompletedTask;
-        });
+        }
+        await Parallel.ForAsync(0, keys.Count, cancellationToken, Convert)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return new KeyListResult()
         {

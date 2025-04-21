@@ -35,11 +35,12 @@ internal sealed class SecretsControllerImpl(
             Tags = body.Tags,
         };
 
-        Task storeVersion = store.StoreObjectAsync(secret_name, version, secret, cancellationToken);
-        Task storeLatest = store.StoreObjectAsync(secret_name, null, secret, cancellationToken);
-
-        await storeVersion.ConfigureAwait(ConfigureAwaitOptions.None);
-        await storeLatest.ConfigureAwait(ConfigureAwaitOptions.None);
+        await store.StoreObjectAsync(secret_name,
+                                     version,
+                                     isLatestVersion: true,
+                                     secret,
+                                     cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return secret;
     }
@@ -102,7 +103,12 @@ internal sealed class SecretsControllerImpl(
         bundle.Attributes = Update(body.Attributes, bundle.Attributes);
         bundle.Tags = body.Tags ?? bundle.Tags;
 
-        await store.StoreObjectAsync(secret_name, secret_version, bundle, cancellationToken);
+        await store.StoreObjectAsync(secret_name,
+                                     secret_version,
+                                     isLatestVersion: false,
+                                     bundle,
+                                     cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return bundle;
     }
@@ -178,7 +184,7 @@ internal sealed class SecretsControllerImpl(
     {
         // TODO: implement paging
         SecretItem[] values = new SecretItem[secrets.Count];
-        await Parallel.ForAsync(0, secrets.Count, cancellationToken, (index, cancellationToken) =>
+        ValueTask Convert(int index, CancellationToken cancellationToken)
         {
             values[index] = new()
             {
@@ -189,7 +195,9 @@ internal sealed class SecretsControllerImpl(
                 Managed = secrets[index].Managed,
             };
             return ValueTask.CompletedTask;
-        });
+        }
+        await Parallel.ForAsync(0, secrets.Count, cancellationToken, Convert)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
 
         return new SecretListResult()
         {
