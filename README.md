@@ -2,45 +2,79 @@
 
 This is work based originally on [Basis Theory](https://basistheory.com/)'s
 [Azure KeyVault Emulator](https://github.com/Basis-Theory/azure-keyvault-emulator)
-which is no longer maintained by them - so I try to do that here.
+which is no longer maintained by them and was very limited in functionality -
+so I try to address those things here.
 
 The Azure KeyVault Emulator helps emulating interactions with Azure KeyVault
-using the official Azure KeyVault clients/SDKs.
+using the official Azure KeyVault clients/SDKs. It stores keys and secrets in
+the file system so data is not lost on restarts.
 
 ## Running in container
 
 For container images, see [azure-keyvault-emulator on ghcr.io ![GitHub Release](https://img.shields.io/github/v/release/rokeller/azure-keyvault-emulator)](https://github.com/rokeller/azure-keyvault-emulator/pkgs/container/azure-keyvault-emulator)
 
 Don't forget to mount a volume to `/app/.vault` in the container to keep
-persisted keys and secrets.
+persisted keys and secrets. The default path can be changed through the environment
+variable `STORE__BASEDIR`.
 
+For added security, the emulator in the container image runs as non-root user
+with ID `1654`
+(see [_What's new in containers for .NET 8_](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-8/containers#non-root-user)),
+so please make sure you assign proper read/write/list permissions when mounting
+a directory.
+
+The container by default exposes only the HTTPS endpoints on port 11001.
 
 ## Supported Operations
 
 ### Keys
 
-#### RSA
+| Operation | EC | RSA | AES |
+|---|---|---|---|
+| Create Key | ✅ (P-256, P-384, P-512) / 🚫 (P-256K) | ✅ | ✅ |
+| Delete Key | ✅ | ✅ | ✅ |
+| Get Key (get latest) | ✅ | ✅ | ✅ |
+| Get Key (by version) | ✅ | ✅ | ✅ |
+| Get Keys | ✅ | ✅ | ✅ |
+| Get Key Versions | ✅ | ✅ | ✅ |
+| Update Key Metadata | ✅ | ✅ | ✅ |
+| Import Key | ✅ | ✅ | ✅ |
+| Release Key (Export Key) | 🚫 | 🚫 | 🚫 |
+| Backup Key | 🚫 | 🚫 | 🚫 |
+| Restore Key | 🚫 | 🚫 | 🚫 |
+| Rotate Key | 🚫 | 🚫 | 🚫 |
+| Get Key Rotation Policy | 🚫 | 🚫 | 🚫 |
+| Update Key Rotation Policy | 🚫 | 🚫 | 🚫 |
+| **Crypto Operations** |
+| Encrypt / Decrypt | ⛔ | ✅ (RSA-OAEP, RSA1_5) / 🚫 (RSA-OAEP-256) | 🚫 |
+| Wrap / Unwrap | ⛔ | ✅ (RSA-OAEP, RSA1_5) / 🚫 (RSA-OAEP-256) | 🚫 |
+| Sign / Verify | ✅ (ES256, ES384, ES512) / 🚫 (ES256K) | ✅ (PS256, PS384, PS512, RS256, RS284, RS512) / 🚫 (RSNULL) | ⛔ |
 
-- Create Key
-- Get Key
-- Get Key by Version
-- Encrypt
-- Decrypt
-- Wrap Key
-- Unwrap Key
+| Key ||
+|---|---|
+| ✅ | Implemented in emulator / Supported by Azure Key Vault |
+| 🚫 | Not Implemented in emulator, but supported by Azure Key Vault |
+| ⛔ | Not Supported by Azure Key Vaul |
 
-Supported [Algorithms](https://learn.microsoft.com/en-us/rest/api/keyvault/keys/decrypt/decrypt?view=rest-keyvault-keys-7.4&tabs=HTTP#jsonwebkeyencryptionalgorithm)
-for Encrypt, Decrypt, Wrap Key and Unwrap Key operations:
-  - `RSA1_5`
-  - `RSA-OAEP`
+> **Note**: Deleted keys are not supported. Deletion of keys purges them immediately.
+
+### Random Number Generation
+
+✅ Random number generation between 1 and 128 bytes (`POST /rng`) is supported.
 
 ### Secrets
 
-- Set Secret (Create new Secret Version)
-- Get Secret
-- Get Secret by Version
-- Get Secret Versions
-- Update Secret Version
+| | Operation |
+|---|---|
+| ✅ | Set Secret |
+| ✅ | Get Secret (get latest) |
+| ✅ | Get Secret (by version) |
+| ✅ | Update Secret |
+| ✅ | Delete Secret |
+| ✅ | Get Secrets |
+| ✅ | Get Secret Versions |
+| 🚫 | Backup Secret |
+| 🚫 | Restore Secret |
 
 ## Requirements
 
@@ -56,7 +90,7 @@ emulator (see [.certs](./.certs)). This certificate is issued for the FQDN
 
 ### AuthN/AuthZ
 
-Azure KeyClient and SecretClient use a
+Azure KeyClient and SecretClient use the
 [ChallengeBasedAuthenticationPolicy](https://github.com/Azure/azure-sdk-for-net/blob/b30fa6d0d402511fdf3270c5d1d9ae5dfa2a0340/sdk/keyvault/Azure.Security.KeyVault.Shared/src/ChallengeBasedAuthenticationPolicy.cs#L64-L66)
 to determine the authentication scheme used by the server. In order for the
 KeyVault Emulator to work with the Azure SDK, the emulator requires JWT bearer
@@ -66,15 +100,15 @@ token lifetime or any other such claims.
 
 By default, you can use the following JWT token for authentication:
 
-`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws`
+`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjQxMDI0NDQ4MDAsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0LyJ9.42D_zJ3qM02NM_ExWU9S9jvNGMfpop3YuWT9lFqJ5yU`
 
 For example:
 
 ```bash
 curl -X 'GET' \
-  'https://localhost:11001/secrets/foo' \
+  'https://localhost.vault.azure.net:11001/secrets/foo' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE4OTAyMzkwMjIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUwMDEvIn0.bHLeGTRqjJrmIJbErE-1Azs724E5ibzvrIc-UQL6pws'
+  -H 'Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjQxMDI0NDQ4MDAsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0LyJ9.42D_zJ3qM02NM_ExWU9S9jvNGMfpop3YuWT9lFqJ5yU'
 ```
 
 ### Connect clients with default Azure credentials
@@ -90,123 +124,17 @@ the tenant ID for which to get a JWT from the challenge issued with the
 You can achieve this by running:
 
 ```bash
-AUTH__TENANTID=$(az account show | jq -r '.tenantId') \
-  STORE__BASEDIR=~/path/to/my/.vault \
-  dotnet run --project AzureKeyVaultEmulator
+AZURE_TENANTID=$(az account show | jq -r '.tenantId')
 ```
+
+Then, pass the value of the `AZURE_TENANTID` variable to the emulator e.g. by
+using the environment variable `AUTH__TENANTID` (please note the double underscore).
 
 This requires `az` CLI. Of course, if instead you want to hardcode the tenant ID,
 you can also do so on the command line, or in the [appsettings.json](./AzureKeyVaultEmulator/appsettings.json).
 The same goes for the path to the directory in which to persist keys and secrets.
 
-## Adding to docker-compose
-
-> **Important**: This section is outdated and will be revised soon.
-
-For the Azure KeyVault Emulator to be accessible from other containers in the
-same compose file, a new OpenSSL certificate has to be generated:
-
-1. Replace `<emulator-hostname>` and run the following script to generate a new public/private keypair:
-
-    ```
-    openssl req \
-    -x509 \
-    -newkey rsa:4096 \
-    -sha256 \
-    -days 3560 \
-    -nodes \
-    -keyout <emulator-hostname>.key \
-    -out <emulator-hostname>.crt \
-    -subj '/CN=<emulator-hostname>' \
-    -extensions san \
-    -config <( \
-      echo '[req]'; \
-      echo 'distinguished_name=req'; \
-      echo '[san]'; \
-      echo 'subjectAltName=DNS.1:localhost,DNS.2:<emulator-hostname>,DNS.3:localhost.vault.azure.net,DNS.4:<emulator-hostname>.vault.azure.net')
-    ```
-
-1. Export a `.pks` formatted key using the public/private keypair generated in the previous step:
-
-    ```
-    openssl pkcs12 -export -out <emulator-hostname>.pfx \
-    -inkey <emulator-hostname>.key \
-    -in <emulator-hostname>.crt
-    ```
-
-1. Trust the certificate in the login keychain
-
-    ```
-    sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain <emulator-hostname>.crt
-    ```
-
-1. Add a service to docker-compose.yml for Azure KeyVault Emulator:
-
-    ```
-    services:
-      ...
-      azure-keyvault-emulator:
-        image: ghcr.io/rokeller/azure-keyvault-emulator:<specific-version>
-        hostname: <emulator-hostname>.vault.azure.net
-        ports:
-          - 5001:5001
-          - 5000:5000
-        volumes:
-          - <path-to-certs>:/https
-        environment:
-          - ASPNETCORE_URLS=https://+:5001;http://+:5000
-          - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/<emulator-hostname>.pfx
-          - KeyVault__Name=<emulator-hostname>
-    ```
-
-1. Modify the client application's entrypoint to add the self-signed certificate to the truststore. Example using docker-compose.yml to override the entrypoint:
-
-    ```
-    services:
-      my-awesome-keyvault-client:
-        container_name: my-awesome-client
-        build:
-          context: .
-        depends_on:
-          - azure-keyvault-emulator
-        entrypoint: sh -c "cp /https/<emulator-hostname>.crt /usr/local/share/ca-certificates/<emulator-hostname>.crt && update-ca-certificates && exec <original-entrypoint>"
-        volumes:
-          - <path-to-certs>:/https
-        environment:
-          - KeyVault__BaseUrl=https://<emulator-hostname>.vault.azure.net:5001/
-    ```
-
-1. (Optional) Azure KeyVault SDKs verify the challenge resource URL as of v4.4.0 (read more [here](https://devblogs.microsoft.com/azure-sdk/guidance-for-applications-using-the-key-vault-libraries/)). 
-To satisfy the new challenge resource verification requirements, do one of the following:
-   1. Use an emulator hostname that ends with `.vault.azure.net` (e.g. `localhost.vault.azure.net`). A new entry may need to be added to `/etc/hosts` to properly resolve DNS (i.e. `127.0.0.1 localhost.vault.azure.net`).
-   1. Set `DisableChallengeResourceVerification` to true in your client options to disable verification.
-```csharp
-var client = new SecretClient(
-    new Uri("https://localhost.vault.azure.net:11001/"), 
-    new LocalTokenCredential(), 
-    new SecretClientOptions
-    {
-        DisableChallengeResourceVerification = true
-    });
-```
-
 ## Development
 
-> **Important**: This section is outdated and will be revised soon.
-
-The provided scripts will check for all dependencies, start docker, build the solution, and run all tests.
-
-### Dependencies
-- [Docker](https://www.docker.com/products/docker-desktop)
-- [Docker Compose](https://www.docker.com/products/docker-desktop)
-- [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)
-
-### Build the KeyVault emulator and run Tests
-
-> **Important**: This section is outdated and will be revised soon.
-
-Run the following command from the root of the project:
-
-```sh
-make verify
-```
+All tests work against an in-memory [test server](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.testhost.testserver?view=aspnetcore-8.0).
+Simply running `dotnet test` should give developers a good idea of the quality.
