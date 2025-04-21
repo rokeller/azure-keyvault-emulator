@@ -9,14 +9,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install pnpm and node for OpenAPI merge
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+          cache-dependency-path: |
+            .openapi/pnpm-lock.yaml
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Add hosts to /etc/hosts
+      - name: Build and test
         run: |
-          echo "127.0.0.1 localhost.vault.azure.net" | sudo tee -a /etc/hosts
+          dotnet restore --locked-mode
+          dotnet build --no-restore
+          dotnet test --no-build \
+            --collect:'XPlat Code Coverage' \
+            --results-directory .testresults/temp
 
-      - name: Verify
-        run: make verify
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@v5
+        with:
+          reports: ".testresults/temp/*/coverage.cobertura.xml"
+          targetdir: ".coverage"
+          reporttypes: "Html_Dark;MarkdownSummaryGithub"
+          assemblyfilters: "-*Tests"
+          filefilters: "-*.g.cs"
+
+      - name: Write coverage results to job summary
+        if: ${{ !cancelled() }}
+        run: |
+          cat .coverage/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+
