@@ -27,8 +27,15 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Install mdtohtml
+        uses: actions-go/go-install@main
+        with:
+          module: github.com/gomarkdown/mdtohtml@latest
+
       - name: Build and test
         run: |
+          mdtohtml README.md AzureKeyVaultEmulator/index.html
+
           dotnet restore --locked-mode
           dotnet build --no-restore
           dotnet test --no-build \

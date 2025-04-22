@@ -8,3 +8,8 @@ coverage:
 		-filefilters:-*.g.cs                                  \
 		-historydir:".coverage/history"                       \
 		'-reporttypes:Html_Dark;MarkdownSummaryGithub'
+
+.PHONY: mdtohtml
+mdtohtml:
+	go install github.com/gomarkdown/mdtohtml@latest
+	mdtohtml README.md AzureKeyVaultEmulator/index.html

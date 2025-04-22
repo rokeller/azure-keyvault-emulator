@@ -19,7 +19,10 @@ WORKDIR /app
 
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 ENV ASPNETCORE_URLS=https://+:11001
+ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/app/.certs/emulator.pfx
 ENTRYPOINT ["dotnet", "AzureKeyVaultEmulator.dll"]
 VOLUME ["/app/.vault"]
+VOLUME ["/app/.certs"]
 
+COPY .certs/emulator.pfx .certs/emulator.pfx
 COPY --chown=app:app --chmod=755 --link --from=build /app/publish .

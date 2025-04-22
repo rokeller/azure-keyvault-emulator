@@ -54,9 +54,9 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 |---|---|
 | ✅ | Implemented in emulator / Supported by Azure Key Vault |
 | 🚫 | Not Implemented in emulator, but supported by Azure Key Vault |
-| ⛔ | Not Supported by Azure Key Vaul |
+| ⛔ | Not Supported by Azure Key Vault |
 
-> **Note**: Deleted keys are not supported. Deletion of keys purges them immediately.
+> **Note**: Deleted key APIs are not supported. Deletion of keys purges them immediately.
 
 ### Random Number Generation
 
@@ -75,6 +75,8 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | ✅ | Get Secret Versions |
 | 🚫 | Backup Secret |
 | 🚫 | Restore Secret |
+
+> **Note**: Deleted secret APIs are not supported. Deletion of secrets purges them immediately.
 
 ## Requirements
 
