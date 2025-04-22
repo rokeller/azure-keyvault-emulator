@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -204,7 +205,8 @@ internal sealed class Store<T> : IStore<T>
         string version)
     {
         // Write the latest version into a temp file, then move the temp file.
-        FileInfo tempFile = new(Path.GetTempFileName());
+        string tempFileName = Path.Combine(root.FullName, $"key.{Guid.NewGuid()}");
+        FileInfo tempFile = new(tempFileName);
         {
             using FileStream fs = File.Open(tempFile.FullName, FileMode.Create);
             using StreamWriter writer = new(fs);
