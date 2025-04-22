@@ -15,17 +15,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install pnpm and node for OpenAPI merge
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+          cache-dependency-path: |
+            .openapi/pnpm-lock.yaml
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Add test host to /etc/hosts
-        run: |
-          echo "127.0.0.1 localhost.vault.azure.net" | sudo tee -a /etc/hosts
+      - name: Install mdtohtml
+        uses: actions-go/go-install@main
+        with:
+          module: github.com/gomarkdown/mdtohtml@latest
 
-      - name: Verify
-        run: make verify
+      - name: Build and test
+        run: |
+          mdtohtml README.md AzureKeyVaultEmulator/index.html
+
+          dotnet restore --locked-mode
+          dotnet build --no-restore
+          dotnet test --no-build \
+            --collect:'XPlat Code Coverage' \
+            --results-directory .testresults/temp
+
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@v5
+        with:
+          reports: ".testresults/temp/*/coverage.cobertura.xml"
+          targetdir: ".coverage"
+          reporttypes: "Html_Dark;MarkdownSummaryGithub"
+          assemblyfilters: "-*Tests"
+          filefilters: "-*.g.cs"
+
+      - name: Write coverage results to job summary
+        if: ${{ !cancelled() }}
+        run: |
+          cat .coverage/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
 
   container-image:
     runs-on: ubuntu-latest
@@ -34,6 +69,30 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      # Install pnpm and node for OpenAPI merge
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+          cache-dependency-path: |
+            .openapi/pnpm-lock.yaml
+
+      - name: Install mdtohtml
+        uses: actions-go/go-install@main
+        with:
+          module: github.com/gomarkdown/mdtohtml@latest
+
+      - name: Prepare building image
+        run: |
+          mdtohtml README.md AzureKeyVaultEmulator/index.html
+          dotnet restore --locked-mode
+          dotnet build --no-restore
 
       - uses: docker/login-action@v3
         with:

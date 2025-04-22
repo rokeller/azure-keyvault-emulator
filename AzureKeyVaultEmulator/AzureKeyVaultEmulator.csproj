@@ -1,12 +1,43 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <KeyVaultApiVersion>7.4</KeyVaultApiVersion>
+    <OpenApiBasePath>../.openapi</OpenApiBasePath>
+    <BeforeGenerateOpenApiCode>GenerateOpenApiControllerItems</BeforeGenerateOpenApiCode>
+    <BeforeCleanGeneratedOpenApiCode>GenerateOpenApiControllerItems</BeforeCleanGeneratedOpenApiCode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.*" />
+    <PackageReference Include="NSwag.MSBuild" Version="14.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AzureKeyVaultEmulator.AcceptanceTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="index.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="MergeOpenApiSpecs"
+    Inputs="$(OpenApiBasePath)/v$(KeyVaultApiVersion)/openapi-merge.json"
+    Outputs="$(OpenApiBasePath)/v$(KeyVaultApiVersion)/KeyVault.json">
+    <Message Importance="High"
+      Text="Merging KeyVault $(KeyVaultApiVersion) APIs for keys and secrets ..." />
+    <Exec Command="$(OpenApiBasePath)/merge.sh $(KeyVaultApiVersion)" />
+  </Target>
+
+  <Target Name="GenerateOpenApiControllerItems"
+    DependsOnTargets="MergeOpenApiSpecs">
+    <Message Importance="High"
+      Text="Generating items for OpenApiController ..." />
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.*" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
+      <OpenApiController Include="$(OpenApiBasePath)/v$(KeyVaultApiVersion)/KeyVault.json" />
     </ItemGroup>
+  </Target>
 
 </Project>

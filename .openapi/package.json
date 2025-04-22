@@ -1,0 +1,16 @@
+{
+  "name": "azure-keyvault-emulator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "cli": "openapi-merge-cli"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.8.0",
+  "dependencies": {
+    "@iouring-engineering/openapi-merge-cli": "^1.5.1"
+  }
+}
