@@ -12,4 +12,4 @@ coverage:
 .PHONY: mdtohtml
 mdtohtml:
 	go install github.com/gomarkdown/mdtohtml@latest
-	mdtohtml README.md AzureKeyVaultEmulator/index.html
+	mdtohtml -page README.md AzureKeyVaultEmulator/index.html
