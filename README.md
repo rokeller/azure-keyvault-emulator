@@ -21,7 +21,14 @@ For added security, the emulator in the container image runs as non-root user
 with ID `1654`
 (see [_What's new in containers for .NET 8_](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-8/containers#non-root-user)),
 so please make sure you assign proper read/write/list permissions when mounting
-a directory.
+a directory. For example:
+
+```bash
+sudo chown 1654 -R .vault
+docker container run --rm -it -p 11001:11001 \
+  -v $PWD/.vault:/app/.vault \
+  ghcr.io/rokeller/azure-keyvault-emulator:v2.0.0-rc2
+```
 
 The container by default exposes only the HTTPS endpoints on port 11001.
 
