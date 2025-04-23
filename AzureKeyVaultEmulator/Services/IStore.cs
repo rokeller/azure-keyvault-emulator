@@ -25,6 +25,20 @@ public interface IStore<T>
     Task<List<T>> ListObjectsAsync(CancellationToken cancellationToken);
 
     /// <summary>
+    /// Checks if the object with the given key exists.
+    /// </summary>
+    /// <param name="key">
+    /// The key of the object to check.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The <see cref="CancellationToken"/> to use.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that results in true if the object exists, false otherwise.
+    /// </returns>
+    Task<bool> ObjectExistsAsync(string key, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Reads an object from the store asynchronously.
     /// </summary>
     /// <param name="key">

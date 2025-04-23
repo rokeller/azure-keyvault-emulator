@@ -80,8 +80,12 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | ✅ | Delete Secret |
 | ✅ | Get Secrets |
 | ✅ | Get Secret Versions |
-| 🚫 | Backup Secret |
-| 🚫 | Restore Secret |
+| ✅ <sup>*</sup> | Backup Secret |
+| ✅ <sup>*</sup> | Restore Secret |
+
+<sup>*</sup> The backup format used/produced by the emulator is not compatible
+with the Azure Key Vault service's backup format. However, secrets backed up
+from the emulator can be restored with the emulator.
 
 > **Note**: Deleted secret APIs are not supported. Deletion of secrets purges them immediately.
 

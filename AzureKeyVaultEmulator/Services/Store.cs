@@ -35,6 +35,12 @@ internal sealed class Store<T> : IStore<T>
         return ReadRedirectedObjectsAsync(files, cancellationToken)!;
     }
 
+    public Task<bool> ObjectExistsAsync(string key, CancellationToken cancellationToken)
+    {
+        FileInfo latest = GetFileForObject(key, null);
+        return Task.FromResult(latest.Exists);
+    }
+
     public async Task<T?> ReadObjectAsync(
         string key,
         string? version,
@@ -124,7 +130,7 @@ internal sealed class Store<T> : IStore<T>
         FileInfo file,
         CancellationToken cancellationToken)
     {
-        using FileStream fs = File.Open(file.FullName, FileMode.Open);
+        using FileStream fs = File.Open(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read);
         // We don't allow storing null values, so the deserializer should never
         // return null.
         return (await JsonSerializer.DeserializeAsync<T>(fs, readOptions, cancellationToken))!;
