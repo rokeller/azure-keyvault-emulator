@@ -1,9 +1,13 @@
 using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Keys.Cryptography;
+using Microsoft.AspNetCore.WebUtilities;
 using Xunit;
 
 namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
@@ -26,7 +30,7 @@ partial class KeysApisTests
                                    DecryptParameters.RsaOaepParameters);
     }
 
-    [Fact(Skip = "Currently unsupported")]
+    [Fact]
     public Task EncryptDecryptWorks_RsaOaep256()
     {
         return EncryptDecryptWorks("rsa-oaep-256",
@@ -55,6 +59,46 @@ partial class KeysApisTests
     }
 
     [Fact]
+    public async Task EncryptForMissingKeyOnEndpointsDirectlyResultIn404()
+    {
+        string name = Guid.NewGuid().ToString();
+        string version = Guid.NewGuid().ToString("N");
+        byte[] rawValue = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString());
+
+        HttpRequestMessage req = new(HttpMethod.Post, $"keys/{name}/{version}/encrypt?api-version=7.4")
+        {
+            Content = JsonContent.Create(new
+            {
+                alg = "RSA1_5",
+                value = WebEncoders.Base64UrlEncode(rawValue),
+            }),
+        };
+        req.Headers.Authorization = new("Bearer", LocalTokenCredential.Token);
+        HttpResponseMessage resp = await httpClient.SendAsync(req);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task DecryptForMissingKeyOnEndpointsDirectlyResultIn404()
+    {
+        string name = Guid.NewGuid().ToString();
+        string version = Guid.NewGuid().ToString("N");
+        byte[] rawValue = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString());
+
+        HttpRequestMessage req = new(HttpMethod.Post, $"keys/{name}/{version}/decrypt?api-version=7.4")
+        {
+            Content = JsonContent.Create(new
+            {
+                alg = "RSA1_5",
+                value = WebEncoders.Base64UrlEncode(rawValue),
+            }),
+        };
+        req.Headers.Authorization = new("Bearer", LocalTokenCredential.Token);
+        HttpResponseMessage resp = await httpClient.SendAsync(req);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
     public Task WrapUnwrapWorks_Rsa15()
     {
         return WrapUnwrapWorks(KeyWrapAlgorithm.Rsa15);
@@ -66,7 +110,7 @@ partial class KeysApisTests
         return WrapUnwrapWorks(KeyWrapAlgorithm.RsaOaep);
     }
 
-    [Fact(Skip = "Currently unsupported")]
+    [Fact]
     public Task WrapUnwrapWorks_RsaOaep256()
     {
         return WrapUnwrapWorks(KeyWrapAlgorithm.RsaOaep256);
@@ -113,6 +157,47 @@ partial class KeysApisTests
 
         VerifyResult verifyRes = await cryptoClient.VerifyDataAsync(alg, data, signRes.Signature);
         Assert.True(verifyRes.IsValid);
+    }
+
+    [Fact]
+    public async Task SignForMissingKeyOnEndpointsDirectlyResultIn404()
+    {
+        string name = Guid.NewGuid().ToString();
+        string version = Guid.NewGuid().ToString("N");
+        byte[] rawValue = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString());
+
+        HttpRequestMessage req = new(HttpMethod.Post, $"keys/{name}/{version}/sign?api-version=7.4")
+        {
+            Content = JsonContent.Create(new
+            {
+                alg = "RS512",
+                value = WebEncoders.Base64UrlEncode(rawValue),
+            }),
+        };
+        req.Headers.Authorization = new("Bearer", LocalTokenCredential.Token);
+        HttpResponseMessage resp = await httpClient.SendAsync(req);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task VerifyForMissingKeyOnEndpointsDirectlyResultIn404()
+    {
+        string name = Guid.NewGuid().ToString();
+        string version = Guid.NewGuid().ToString("N");
+        byte[] rawValue = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString());
+
+        HttpRequestMessage req = new(HttpMethod.Post, $"keys/{name}/{version}/verify?api-version=7.4")
+        {
+            Content = JsonContent.Create(new
+            {
+                alg = "RS512",
+                value = WebEncoders.Base64UrlEncode(rawValue),
+                digest = WebEncoders.Base64UrlEncode(rawValue),
+            }),
+        };
+        req.Headers.Authorization = new("Bearer", LocalTokenCredential.Token);
+        HttpResponseMessage resp = await httpClient.SendAsync(req);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
     private async Task EncryptDecryptWorks(

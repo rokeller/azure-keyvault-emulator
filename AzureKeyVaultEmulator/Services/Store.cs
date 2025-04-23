@@ -5,20 +5,24 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace AzureKeyVaultEmulator.Services;
 
 internal sealed class Store<T> : IStore<T>
 {
+    private readonly ILogger<Store<T>> logger;
     private readonly DirectoryInfo root;
     private readonly JsonSerializerOptions? writeOptions;
     private readonly JsonSerializerOptions? readOptions;
 
     public Store(
+        ILogger<Store<T>> logger,
         DirectoryInfo root,
         JsonSerializerOptions? writeOptions = null,
         JsonSerializerOptions? readOptions = null)
     {
+        this.logger = logger;
         this.root = root;
         this.writeOptions = writeOptions;
         this.readOptions = readOptions;
@@ -27,12 +31,20 @@ internal sealed class Store<T> : IStore<T>
         {
             root.Create();
         }
+        logger.LogInformation("Using stored {Type} objects from {Path}",
+            typeof(T), root.FullName);
     }
 
     public Task<List<T>> ListObjectsAsync(CancellationToken cancellationToken)
     {
         FileInfo[] files = root.GetFiles("*.latest", SearchOption.TopDirectoryOnly);
         return ReadRedirectedObjectsAsync(files, cancellationToken)!;
+    }
+
+    public Task<bool> ObjectExistsAsync(string key, CancellationToken cancellationToken)
+    {
+        FileInfo latest = GetFileForObject(key, null);
+        return Task.FromResult(latest.Exists);
     }
 
     public async Task<T?> ReadObjectAsync(
@@ -124,7 +136,7 @@ internal sealed class Store<T> : IStore<T>
         FileInfo file,
         CancellationToken cancellationToken)
     {
-        using FileStream fs = File.Open(file.FullName, FileMode.Open);
+        using FileStream fs = File.Open(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read);
         // We don't allow storing null values, so the deserializer should never
         // return null.
         return (await JsonSerializer.DeserializeAsync<T>(fs, readOptions, cancellationToken))!;

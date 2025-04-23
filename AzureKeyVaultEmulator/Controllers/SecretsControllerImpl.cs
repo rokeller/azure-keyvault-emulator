@@ -1,21 +1,31 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AzureKeyVaultEmulator.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace AzureKeyVaultEmulator.Controllers;
 
-internal sealed class SecretsControllerImpl(
+internal sealed partial class SecretsControllerImpl(
     IStore<SecretBundle> store,
     IHttpContextAccessor httpContextAccessor) : ISecretsController
 {
     private readonly IStore<SecretBundle> store = store;
     private readonly IHttpContextAccessor httpContextAccessor = httpContextAccessor;
+
+    private static readonly JsonSerializerOptions SkipNull = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
 
     public async Task<ActionResult<SecretBundle>> SetSecretAsync(
         string secret_name,
@@ -132,7 +142,6 @@ internal sealed class SecretsControllerImpl(
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        // TODO: implement paging
         List<SecretBundle>? secrets = await store
             .ListObjectVersionsAsync(secret_name, cancellationToken)
             .ConfigureAwait(ConfigureAwaitOptions.None);
@@ -146,20 +155,85 @@ internal sealed class SecretsControllerImpl(
             .ConfigureAwait(ConfigureAwaitOptions.None);
     }
 
-    public Task<ActionResult<BackupSecretResult>> BackupSecretAsync(
+    public async Task<ActionResult<BackupSecretResult>> BackupSecretAsync(
         string secret_name,
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        List<SecretBundle>? secrets = await store
+            .ListObjectVersionsAsync(secret_name, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        if (null == secrets)
+        {
+            return new NotFoundResult();
+        }
+
+        BackedUpSecretVersions backup = new("V1", secret_name, secrets);
+        byte[] rawBackup;
+        using MemoryStream memstr = new();
+        {
+            using GZipStream zipStream = new(memstr, CompressionLevel.Optimal);
+            await JsonSerializer.SerializeAsync(
+                zipStream, backup, SkipNull, cancellationToken: default)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+            await zipStream.FlushAsync(default);
+        }
+        rawBackup = memstr.ToArray();
+
+        BackupSecretResult result = new()
+        {
+            Value = WebEncoders.Base64UrlEncode(rawBackup),
+        };
+
+        return result;
     }
 
-    public Task<ActionResult<SecretBundle>> RestoreSecretAsync(
+    public async Task<ActionResult<SecretBundle>> RestoreSecretAsync(
         string api_version,
         SecretRestoreParameters body,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        byte[] rawBackup = WebEncoders.Base64UrlDecode(body.Value);
+        BackedUpSecretVersions? backup;
+        using MemoryStream memstr = new(rawBackup, writable: false);
+        {
+            using GZipStream gzipStream = new(memstr, CompressionMode.Decompress);
+            backup = await JsonSerializer
+               .DeserializeAsync<BackedUpSecretVersions>(
+                    gzipStream, cancellationToken: cancellationToken)
+               .ConfigureAwait(false);
+        }
+
+        if (!backup.HasValue || backup.Value.BackupVersion != "V1" ||
+            String.IsNullOrWhiteSpace(backup.Value.Name) ||
+            null == backup.Value.Versions || 0 >= backup.Value.Versions.Count)
+        {
+            return new BadRequestResult();
+        }
+
+        string secretName = backup.Value.Name;
+        if (await store.ObjectExistsAsync(secretName, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None))
+        {
+            return new ConflictResult();
+        }
+
+        int pos = 0;
+        // Sort by creation date descending such that the first secret version
+        // we store is the latest.
+        IEnumerable<SecretBundle> versionsByCreationDate = backup.Value.Versions
+            .OrderByDescending(v => v.Attributes!.Created);
+        foreach (SecretBundle versionData in versionsByCreationDate)
+        {
+            string version = new Uri(versionData.Id!).Segments.Last();
+            await store.StoreObjectAsync(
+                secretName, version, (pos++) == 0, versionData, cancellationToken)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+        }
+
+        return await GetSecretAsync(secretName, null!, api_version, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
     }
 
     private Uri GetSecretUrl(string secret_name, string secret_version)
@@ -178,7 +252,7 @@ internal sealed class SecretsControllerImpl(
         return secretUrl.Uri;
     }
 
-    private async static Task<ActionResult<SecretListResult>> ListSecretsAsync(
+    private async static Task<SecretListResult> ListSecretsAsync(
         List<SecretBundle> secrets,
         CancellationToken cancellationToken = default)
     {
