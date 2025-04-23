@@ -15,7 +15,8 @@ For container images, see [azure-keyvault-emulator on ghcr.io ![GitHub Release](
 
 Don't forget to mount a volume to `/app/.vault` in the container to keep
 persisted keys and secrets. The default path can be changed through the environment
-variable `STORE__BASEDIR`.
+variable `STORE__BASEDIR`. Please note, that keys and secrets stored in the local
+file system are **not** protected/encrypted.
 
 For added security, the emulator in the container image runs as non-root user
 with ID `1654`
@@ -47,8 +48,8 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | Update Key Metadata | ✅ | ✅ | ✅ |
 | Import Key | ✅ | ✅ | ✅ |
 | Release Key (Export Key) | 🚫 | 🚫 | 🚫 |
-| Backup Key | 🚫 | 🚫 | 🚫 |
-| Restore Key | 🚫 | 🚫 | 🚫 |
+| Backup Key | ✅ <sup>*</sup> | ✅ <sup>*</sup> | ✅ <sup>*</sup> |
+| Restore Key | ✅ <sup>*</sup> | ✅ <sup>*</sup> | ✅ <sup>*</sup> |
 | Rotate Key | 🚫 | 🚫 | 🚫 |
 | Get Key Rotation Policy | 🚫 | 🚫 | 🚫 |
 | Update Key Rotation Policy | 🚫 | 🚫 | 🚫 |
@@ -63,6 +64,10 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | 🚫 | Not Implemented in emulator, but supported by Azure Key Vault |
 | ⛔ | Not Supported by Azure Key Vault |
 | 🚧 | Reserved by Azure Key Vault, not available |
+
+<sup>*</sup> The backup format used/produced by the emulator is **not** compatible
+with the Azure Key Vault service's backup format and it is not encrypted. However,
+keys backed up from the emulator can be restored with the emulator.
 
 > **Note**: Deleted key APIs are not supported. Deletion of keys purges them immediately.
 
@@ -84,7 +89,7 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | ✅ <sup>*</sup> | Backup Secret |
 | ✅ <sup>*</sup> | Restore Secret |
 
-<sup>*</sup> The backup format used/produced by the emulator is not compatible
+<sup>*</sup> The backup format used/produced by the emulator is **not** compatible
 with the Azure Key Vault service's backup format. However, secrets backed up
 from the emulator can be restored with the emulator.
 

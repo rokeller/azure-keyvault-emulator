@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AzureKeyVaultEmulator.Converters;
@@ -13,7 +17,7 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace AzureKeyVaultEmulator.Controllers;
 
-internal sealed class KeysControllerImpl(
+internal sealed partial class KeysControllerImpl(
     IStore<KeyBundle> store,
     IEnumToStringConvertible<Key_ops> keyOpsConverter1,
     IEnumToStringConvertible<key_ops> keyOpsConverter2,
@@ -24,22 +28,90 @@ internal sealed class KeysControllerImpl(
     private readonly IEnumToStringConvertible<key_ops> keyOpsConverter2 = keyOpsConverter2;
     private readonly IHttpContextAccessor httpContextAccessor = httpContextAccessor;
 
-    public Task<ActionResult<BackupKeyResult>> BackupKeyAsync(
+    private static readonly JsonSerializerOptions SkipNull = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    public async Task<ActionResult<BackupKeyResult>> BackupKeyAsync(
         string key_name,
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/backup-key/backup-key?view=rest-keyvault-keys-7.4&tabs=HTTP
-        throw new NotSupportedException();
+        List<KeyBundle>? keys = await store
+            .ListObjectVersionsAsync(key_name, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
+
+        if (null == keys)
+        {
+            return new NotFoundResult();
+        }
+
+        BackedUpKeyVersions backup = new("V1", key_name, keys);
+        byte[] rawBackup;
+        using MemoryStream memstr = new();
+        {
+            using GZipStream zipStream = new(memstr, CompressionLevel.Optimal);
+            await JsonSerializer.SerializeAsync(
+                zipStream, backup, SkipNull, cancellationToken: default)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+            await zipStream.FlushAsync(default);
+        }
+        rawBackup = memstr.ToArray();
+
+        BackupKeyResult result = new()
+        {
+            Value = WebEncoders.Base64UrlEncode(rawBackup),
+        };
+
+        return result;
     }
 
-    public Task<ActionResult<KeyBundle>> RestoreKeyAsync(
+    public async Task<ActionResult<KeyBundle>> RestoreKeyAsync(
         string api_version,
         KeyRestoreParameters body,
         CancellationToken cancellationToken = default)
     {
-        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/restore-key/restore-key?view=rest-keyvault-keys-7.4&tabs=HTTP
-        throw new NotSupportedException();
+        byte[] rawBackup = WebEncoders.Base64UrlDecode(body.Value);
+        BackedUpKeyVersions? backup;
+        using MemoryStream memstr = new(rawBackup, writable: false);
+        {
+            using GZipStream gzipStream = new(memstr, CompressionMode.Decompress);
+            backup = await JsonSerializer
+               .DeserializeAsync<BackedUpKeyVersions>(
+                    gzipStream, cancellationToken: cancellationToken)
+               .ConfigureAwait(false);
+        }
+
+        if (!backup.HasValue || backup.Value.BackupVersion != "V1" ||
+            String.IsNullOrWhiteSpace(backup.Value.Name) ||
+            null == backup.Value.Versions || 0 >= backup.Value.Versions.Count)
+        {
+            return new BadRequestResult();
+        }
+
+        string keyName = backup.Value.Name;
+        if (await store.ObjectExistsAsync(keyName, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None))
+        {
+            return new ConflictResult();
+        }
+
+        int pos = 0;
+        // Sort by creation date descending such that the first key version
+        // we store is the latest.
+        IEnumerable<KeyBundle> versionsByCreationDate = backup.Value.Versions
+            .OrderByDescending(v => v.Attributes!.Created);
+        foreach (KeyBundle versionData in versionsByCreationDate)
+        {
+            string version = new Uri(versionData.Key!.Kid!).Segments.Last();
+            await store.StoreObjectAsync(
+                keyName, version, (pos++) == 0, versionData, cancellationToken)
+                .ConfigureAwait(ConfigureAwaitOptions.None);
+        }
+
+        return await GetKeyAsync(keyName, null!, api_version, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.None);
     }
 
     public async Task<ActionResult<KeyBundle>> CreateKeyAsync(
