@@ -53,15 +53,16 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | Get Key Rotation Policy | 🚫 | 🚫 | 🚫 |
 | Update Key Rotation Policy | 🚫 | 🚫 | 🚫 |
 | **Crypto Operations** |
-| Encrypt / Decrypt | ⛔ | ✅ (RSA-OAEP, RSA1_5) / 🚫 (RSA-OAEP-256) | 🚫 |
-| Wrap / Unwrap | ⛔ | ✅ (RSA-OAEP, RSA1_5) / 🚫 (RSA-OAEP-256) | 🚫 |
-| Sign / Verify | ✅ (ES256, ES384, ES512) / 🚫 (ES256K) | ✅ (PS256, PS384, PS512, RS256, RS284, RS512) / 🚫 (RSNULL) | ⛔ |
+| Encrypt / Decrypt | ⛔ | ✅ | 🚫 |
+| Wrap / Unwrap | ⛔ | ✅  | 🚫 |
+| Sign / Verify | ✅ (ES256, ES384, ES512) / 🚫 (ES256K) | ✅ (PS256, PS384, PS512, RS256, RS284, RS512) / 🚧 (RSNULL) | ⛔ |
 
 | Key ||
 |---|---|
 | ✅ | Implemented in emulator / Supported by Azure Key Vault |
 | 🚫 | Not Implemented in emulator, but supported by Azure Key Vault |
 | ⛔ | Not Supported by Azure Key Vault |
+| 🚧 | Reserved by Azure Key Vault, not available |
 
 > **Note**: Deleted key APIs are not supported. Deletion of keys purges them immediately.
 

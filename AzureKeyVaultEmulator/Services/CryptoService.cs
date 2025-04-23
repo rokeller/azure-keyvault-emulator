@@ -111,7 +111,7 @@ internal static class CryptoService
                 return alg switch
                 {
                     KeyOperationsParametersAlg.RSAOAEP or
-                    // KeyOperationsParametersAlg.RSAOAEP256 or
+                    KeyOperationsParametersAlg.RSAOAEP256 or
                     KeyOperationsParametersAlg.RSA1_5 => true,
                     _ => false,
                 };
@@ -187,8 +187,8 @@ internal static class CryptoService
         {
             KeyOperationsParametersAlg.RSAOAEP =>
                 EncryptRsa(value, key, RSAEncryptionPadding.OaepSHA1),
-            // KeyOperationsParametersAlg.RSAOAEP256 =>
-            //     EncryptRsa(value, key, RSAEncryptionPadding.OaepSHA256),
+            KeyOperationsParametersAlg.RSAOAEP256 =>
+                EncryptRsa(value, key, RSAEncryptionPadding.OaepSHA256),
             KeyOperationsParametersAlg.RSA1_5 =>
                 EncryptRsa(value, key, RSAEncryptionPadding.Pkcs1),
             _ => throw new NotSupportedException(),
@@ -209,8 +209,8 @@ internal static class CryptoService
         {
             KeyOperationsParametersAlg.RSAOAEP =>
                 DecryptRsa(ciphertext, key, RSAEncryptionPadding.OaepSHA1),
-            // KeyOperationsParametersAlg.RSAOAEP256 =>
-            //     DecryptRsa(ciphertext, key, RSAEncryptionPadding.OaepSHA256),
+            KeyOperationsParametersAlg.RSAOAEP256 =>
+                DecryptRsa(ciphertext, key, RSAEncryptionPadding.OaepSHA256),
             KeyOperationsParametersAlg.RSA1_5 =>
                 DecryptRsa(ciphertext, key, RSAEncryptionPadding.Pkcs1),
             _ => throw new NotSupportedException(),
@@ -228,10 +228,8 @@ internal static class CryptoService
         JsonWebKey key,
         RSAEncryptionPadding padding)
     {
-        (RSA rsa, RSAParameters rsaParameters) = LoadRsaFromKey(key);
-        using var rsaAlg = new RSACryptoServiceProvider(rsa.KeySize);
-        rsaAlg.ImportParameters(rsaParameters);
-        byte[] ciphertext = rsaAlg.Encrypt(value, padding);
+        using RSA rsa = LoadRsaFromKey(key);
+        byte[] ciphertext = rsa.Encrypt(value, padding);
 
         return new()
         {
@@ -244,10 +242,8 @@ internal static class CryptoService
         JsonWebKey key,
         RSAEncryptionPadding padding)
     {
-        (RSA rsa, RSAParameters rsaParameters) = LoadRsaFromKey(key);
-        using var rsaAlg = new RSACryptoServiceProvider(rsa.KeySize);
-        rsaAlg.ImportParameters(rsaParameters);
-        byte[] plaintext = rsaAlg.Decrypt(value, padding);
+        using RSA rsa = LoadRsaFromKey(key);
+        byte[] plaintext = rsa.Decrypt(value, padding);
 
         return new()
         {
@@ -296,7 +292,7 @@ internal static class CryptoService
 
     private static KeyOperationResult SignRsa(KeySignParameters signParams, JsonWebKey key)
     {
-        (RSA rsa, _) = LoadRsaFromKey(key);
+        using RSA rsa = LoadRsaFromKey(key);
         (HashAlgorithmName alg, RSASignaturePadding pad) = signParams.Alg switch
         {
             KeySignParametersAlg.PS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
@@ -318,7 +314,7 @@ internal static class CryptoService
 
     private static KeyVerifyResult VerifyRsa(KeyVerifyParameters verifyParams, JsonWebKey key)
     {
-        (RSA rsa, _) = LoadRsaFromKey(key);
+        using RSA rsa = LoadRsaFromKey(key);
         (HashAlgorithmName alg, RSASignaturePadding pad) = verifyParams.Alg switch
         {
             KeyVerifyParametersAlg.PS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
@@ -338,7 +334,7 @@ internal static class CryptoService
         };
     }
 
-    private static (RSA, RSAParameters) LoadRsaFromKey(JsonWebKey key)
+    private static RSA LoadRsaFromKey(JsonWebKey key)
     {
         RSAParameters rsaParameters = new()
         {
@@ -353,7 +349,7 @@ internal static class CryptoService
         };
         RSA rsa = RSA.Create(rsaParameters);
 
-        return (rsa, rsaParameters);
+        return rsa;
     }
 
     private static (ECDsa, ECParameters) LoadEcFromKey(JsonWebKey key)

@@ -26,7 +26,7 @@ partial class KeysApisTests
                                    DecryptParameters.RsaOaepParameters);
     }
 
-    [Fact(Skip = "Currently unsupported")]
+    [Fact]
     public Task EncryptDecryptWorks_RsaOaep256()
     {
         return EncryptDecryptWorks("rsa-oaep-256",
@@ -66,7 +66,7 @@ partial class KeysApisTests
         return WrapUnwrapWorks(KeyWrapAlgorithm.RsaOaep);
     }
 
-    [Fact(Skip = "Currently unsupported")]
+    [Fact]
     public Task WrapUnwrapWorks_RsaOaep256()
     {
         return WrapUnwrapWorks(KeyWrapAlgorithm.RsaOaep256);
