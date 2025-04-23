@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 
@@ -110,8 +111,9 @@ static Func<IServiceProvider, IStore<T>> UseStoreFactory<T>(
     Store<T> StoreFactory(IServiceProvider services)
     {
         IOptions<StoreOptions> storeOptions = services.GetRequiredService<IOptions<StoreOptions>>();
+        ILogger<Store<T>> logger = services.GetRequiredService<ILogger<Store<T>>>();
         string secretsStorageDir = Path.Combine(storeOptions.Value.BaseDir, objectType);
-        return new(new(secretsStorageDir), writeOptions, readOptions);
+        return new(logger, new(secretsStorageDir), writeOptions, readOptions);
     }
 
     return StoreFactory;

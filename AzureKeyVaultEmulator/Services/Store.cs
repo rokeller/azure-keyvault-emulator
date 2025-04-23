@@ -5,20 +5,24 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace AzureKeyVaultEmulator.Services;
 
 internal sealed class Store<T> : IStore<T>
 {
+    private readonly ILogger<Store<T>> logger;
     private readonly DirectoryInfo root;
     private readonly JsonSerializerOptions? writeOptions;
     private readonly JsonSerializerOptions? readOptions;
 
     public Store(
+        ILogger<Store<T>> logger,
         DirectoryInfo root,
         JsonSerializerOptions? writeOptions = null,
         JsonSerializerOptions? readOptions = null)
     {
+        this.logger = logger;
         this.root = root;
         this.writeOptions = writeOptions;
         this.readOptions = readOptions;
@@ -27,6 +31,8 @@ internal sealed class Store<T> : IStore<T>
         {
             root.Create();
         }
+        logger.LogInformation("Using stored {Type} objects from {Path}",
+            typeof(T), root.FullName);
     }
 
     public Task<List<T>> ListObjectsAsync(CancellationToken cancellationToken)
