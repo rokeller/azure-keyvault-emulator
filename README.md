@@ -150,7 +150,7 @@ Then, pass the value of the `AZURE_TENANTID` variable to the emulator e.g. by
 using the environment variable `AUTH__TENANTID` (please note the double underscore).
 
 This requires `az` CLI. Of course, if instead you want to hardcode the tenant ID,
-you can also do so on the command line, or in the [appsettings.json](./AzureKeyVaultEmulator/appsettings.json).
+you can also do so on the command line, or in the [appsettings.json](src/AzureKeyVaultEmulator/appsettings.json).
 The same goes for the path to the directory in which to persist keys and secrets.
 
 ## Development

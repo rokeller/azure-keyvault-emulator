@@ -8,7 +8,7 @@
             "name": "C#: AzureKeyVaultEmulator Debug",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj"
+            "projectPath": "${workspaceFolder}/src/AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj"
         }
 
     ]

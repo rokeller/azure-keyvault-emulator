@@ -1,15 +1,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0-noble AS build
 WORKDIR /app
 
-COPY AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj ./AzureKeyVaultEmulator/
-COPY AzureKeyVaultEmulator/packages.lock.json ./AzureKeyVaultEmulator/
+COPY src/AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj ./AzureKeyVaultEmulator/
+COPY src/AzureKeyVaultEmulator/packages.lock.json ./AzureKeyVaultEmulator/
 RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         --use-lock-file --locked-mode
 
 ARG SKIP_OPENAPI_MERGE
 ENV SKIP_OPENAPI_MERGE=${SKIP_OPENAPI_MERGE:-false}
 
-COPY . .
+COPY src .
 RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         -c Release -o publish --no-restore && \
     rm /app/publish/packages.lock.json && \

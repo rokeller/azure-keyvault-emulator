@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj" />
+    <ProjectReference Include="../../src/AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj" />
   </ItemGroup>
 
 </Project>
