@@ -28,7 +28,7 @@ a directory. For example:
 sudo chown 1654 -R .vault
 docker container run --rm -it -p 11001:11001 \
   -v $PWD/.vault:/app/.vault \
-  ghcr.io/rokeller/azure-keyvault-emulator:v2.0.0-rc2
+  ghcr.io/rokeller/azure-keyvault-emulator:v2.0.0
 ```
 
 The container by default exposes only the HTTPS endpoints on port 11001.
