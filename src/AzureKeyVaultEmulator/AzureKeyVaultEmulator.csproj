@@ -5,7 +5,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <KeyVaultApiVersion>7.4</KeyVaultApiVersion>
-    <OpenApiBasePath>../.openapi</OpenApiBasePath>
+    <OpenApiBasePath>../../.openapi</OpenApiBasePath>
     <BeforeGenerateOpenApiCode>GenerateOpenApiControllerItems</BeforeGenerateOpenApiCode>
     <BeforeCleanGeneratedOpenApiCode>GenerateOpenApiControllerItems</BeforeCleanGeneratedOpenApiCode>
   </PropertyGroup>

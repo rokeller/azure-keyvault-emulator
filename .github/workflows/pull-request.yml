@@ -34,7 +34,7 @@ jobs:
 
       - name: Build and test
         run: |
-          mdtohtml -page README.md AzureKeyVaultEmulator/index.html
+          mdtohtml -page README.md src/AzureKeyVaultEmulator/index.html
 
           dotnet restore --locked-mode
           dotnet build --no-restore

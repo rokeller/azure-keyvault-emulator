@@ -10,7 +10,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_HostBuilder__ReloadConfigOnChange": "false",
-        "ASPNETCORE_Kestrel__Certificates__Default__Path": "../.certs/emulator.pfx"
+        "ASPNETCORE_Kestrel__Certificates__Default__Path": "../../.certs/emulator.pfx"
       }
     }
   }
