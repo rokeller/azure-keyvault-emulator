@@ -49,8 +49,7 @@ internal sealed partial class SecretsControllerImpl(
                                      version,
                                      isLatestVersion: true,
                                      secret,
-                                     cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+                                     cancellationToken);
 
         return secret;
     }
@@ -60,8 +59,7 @@ internal sealed partial class SecretsControllerImpl(
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        await store.DeleteObjectAsync(secret_name, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        await store.DeleteObjectAsync(secret_name, cancellationToken);
 
         int now = DateTimeOffset.UtcNow.ToUnixSeconds();
         DeletedSecretBundle result = new()
@@ -82,8 +80,7 @@ internal sealed partial class SecretsControllerImpl(
         CancellationToken cancellationToken = default)
     {
         SecretBundle? bundle = await store
-            .ReadObjectAsync(secret_name, secret_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ReadObjectAsync(secret_name, secret_version, cancellationToken);
 
         if (null == bundle)
         {
@@ -101,8 +98,7 @@ internal sealed partial class SecretsControllerImpl(
         CancellationToken cancellationToken = default)
     {
         SecretBundle? bundle = await store
-            .ReadObjectAsync(secret_name, secret_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ReadObjectAsync(secret_name, secret_version, cancellationToken);
 
         if (null == bundle)
         {
@@ -117,8 +113,7 @@ internal sealed partial class SecretsControllerImpl(
                                      secret_version,
                                      isLatestVersion: false,
                                      bundle,
-                                     cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+                                     cancellationToken);
 
         return bundle;
     }
@@ -129,11 +124,9 @@ internal sealed partial class SecretsControllerImpl(
         CancellationToken cancellationToken = default)
     {
         // TODO: implement paging
-        List<SecretBundle> secrets = await store.ListObjectsAsync(cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        List<SecretBundle> secrets = await store.ListObjectsAsync(cancellationToken);
 
-        return await ListSecretsAsync(secrets, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await ListSecretsAsync(secrets, cancellationToken);
     }
 
     public async Task<ActionResult<SecretListResult>> GetSecretVersionsAsync(
@@ -143,16 +136,14 @@ internal sealed partial class SecretsControllerImpl(
         CancellationToken cancellationToken = default)
     {
         List<SecretBundle>? secrets = await store
-            .ListObjectVersionsAsync(secret_name, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ListObjectVersionsAsync(secret_name, cancellationToken);
 
         if (null == secrets)
         {
             return new NotFoundResult();
         }
 
-        return await ListSecretsAsync(secrets, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await ListSecretsAsync(secrets, cancellationToken);
     }
 
     public async Task<ActionResult<BackupSecretResult>> BackupSecretAsync(
@@ -161,8 +152,7 @@ internal sealed partial class SecretsControllerImpl(
         CancellationToken cancellationToken = default)
     {
         List<SecretBundle>? secrets = await store
-            .ListObjectVersionsAsync(secret_name, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ListObjectVersionsAsync(secret_name, cancellationToken);
 
         if (null == secrets)
         {
@@ -175,8 +165,7 @@ internal sealed partial class SecretsControllerImpl(
         {
             using GZipStream zipStream = new(memstr, CompressionLevel.Optimal);
             await JsonSerializer.SerializeAsync(
-                zipStream, backup, SkipNull, cancellationToken: default)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+                zipStream, backup, SkipNull, cancellationToken: default);
             await zipStream.FlushAsync(default);
         }
         rawBackup = memstr.ToArray();
@@ -201,8 +190,7 @@ internal sealed partial class SecretsControllerImpl(
             using GZipStream gzipStream = new(memstr, CompressionMode.Decompress);
             backup = await JsonSerializer
                .DeserializeAsync<BackedUpSecretVersions>(
-                    gzipStream, cancellationToken: cancellationToken)
-               .ConfigureAwait(false);
+                    gzipStream, cancellationToken: cancellationToken);
         }
 
         if (!backup.HasValue || backup.Value.BackupVersion != "V1" ||
@@ -213,8 +201,7 @@ internal sealed partial class SecretsControllerImpl(
         }
 
         string secretName = backup.Value.Name;
-        if (await store.ObjectExistsAsync(secretName, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None))
+        if (await store.ObjectExistsAsync(secretName, cancellationToken))
         {
             return new ConflictResult();
         }
@@ -228,12 +215,10 @@ internal sealed partial class SecretsControllerImpl(
         {
             string version = new Uri(versionData.Id!).Segments.Last();
             await store.StoreObjectAsync(
-                secretName, version, (pos++) == 0, versionData, cancellationToken)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+                secretName, version, (pos++) == 0, versionData, cancellationToken);
         }
 
-        return await GetSecretAsync(secretName, null!, api_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await GetSecretAsync(secretName, null!, api_version, cancellationToken);
     }
 
     private Uri GetSecretUrl(string secret_name, string secret_version)
@@ -270,8 +255,7 @@ internal sealed partial class SecretsControllerImpl(
             };
             return ValueTask.CompletedTask;
         }
-        await Parallel.ForAsync(0, secrets.Count, cancellationToken, Convert)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        await Parallel.ForAsync(0, secrets.Count, cancellationToken, Convert);
 
         return new SecretListResult()
         {

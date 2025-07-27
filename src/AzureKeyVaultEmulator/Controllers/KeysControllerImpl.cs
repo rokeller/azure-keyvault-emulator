@@ -19,11 +19,14 @@ namespace AzureKeyVaultEmulator.Controllers;
 
 internal sealed partial class KeysControllerImpl(
     IStore<KeyBundle> store,
+    IStore<KeyRotationPolicy> rotationPolicyStore,
     IEnumToStringConvertible<Key_ops> keyOpsConverter1,
     IEnumToStringConvertible<key_ops> keyOpsConverter2,
     IHttpContextAccessor httpContextAccessor) : IKeysController
 {
+    private const string KeyRotationPolicyInstance = "instance";
     private readonly IStore<KeyBundle> store = store;
+    private readonly IStore<KeyRotationPolicy> rotationPolicyStore = rotationPolicyStore;
     private readonly IEnumToStringConvertible<Key_ops> keyOpsConverter1 = keyOpsConverter1;
     private readonly IEnumToStringConvertible<key_ops> keyOpsConverter2 = keyOpsConverter2;
     private readonly IHttpContextAccessor httpContextAccessor = httpContextAccessor;
@@ -39,8 +42,7 @@ internal sealed partial class KeysControllerImpl(
         CancellationToken cancellationToken = default)
     {
         List<KeyBundle>? keys = await store
-            .ListObjectVersionsAsync(key_name, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ListObjectVersionsAsync(key_name, cancellationToken);
 
         if (null == keys)
         {
@@ -53,8 +55,7 @@ internal sealed partial class KeysControllerImpl(
         {
             using GZipStream zipStream = new(memstr, CompressionLevel.Optimal);
             await JsonSerializer.SerializeAsync(
-                zipStream, backup, SkipNull, cancellationToken: default)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+                zipStream, backup, SkipNull, cancellationToken: default);
             await zipStream.FlushAsync(default);
         }
         rawBackup = memstr.ToArray();
@@ -79,8 +80,7 @@ internal sealed partial class KeysControllerImpl(
             using GZipStream gzipStream = new(memstr, CompressionMode.Decompress);
             backup = await JsonSerializer
                .DeserializeAsync<BackedUpKeyVersions>(
-                    gzipStream, cancellationToken: cancellationToken)
-               .ConfigureAwait(false);
+                    gzipStream, cancellationToken: cancellationToken);
         }
 
         if (!backup.HasValue || backup.Value.BackupVersion != "V1" ||
@@ -91,8 +91,7 @@ internal sealed partial class KeysControllerImpl(
         }
 
         string keyName = backup.Value.Name;
-        if (await store.ObjectExistsAsync(keyName, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None))
+        if (await store.ObjectExistsAsync(keyName, cancellationToken))
         {
             return new ConflictResult();
         }
@@ -106,12 +105,10 @@ internal sealed partial class KeysControllerImpl(
         {
             string version = new Uri(versionData.Key!.Kid!).Segments.Last();
             await store.StoreObjectAsync(
-                keyName, version, (pos++) == 0, versionData, cancellationToken)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+                keyName, version, (pos++) == 0, versionData, cancellationToken);
         }
 
-        return await GetKeyAsync(keyName, null!, api_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await GetKeyAsync(keyName, null!, api_version, cancellationToken);
     }
 
     public async Task<ActionResult<KeyBundle>> CreateKeyAsync(
@@ -137,8 +134,7 @@ internal sealed partial class KeysControllerImpl(
                                      version,
                                      isLatestVersion: true,
                                      key,
-                                     cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+                                     cancellationToken);
 
         return key;
     }
@@ -148,8 +144,10 @@ internal sealed partial class KeysControllerImpl(
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        await store.DeleteObjectAsync(key_name, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        await Task.WhenAll(
+            store.DeleteObjectAsync(key_name, cancellationToken),
+            rotationPolicyStore.DeleteObjectIfExistsAsync(key_name, cancellationToken)
+        );
 
         int now = DateTimeOffset.UtcNow.ToUnixSeconds();
         DeletedKeyBundle result = new()
@@ -169,8 +167,7 @@ internal sealed partial class KeysControllerImpl(
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
 
         if (null == bundle)
         {
@@ -186,11 +183,9 @@ internal sealed partial class KeysControllerImpl(
         CancellationToken cancellationToken = default)
     {
         // TODO: implement paging
-        List<KeyBundle> keys = await store.ListObjectsAsync(cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        List<KeyBundle> keys = await store.ListObjectsAsync(cancellationToken);
 
-        return await ListKeysAsync(keys, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await ListKeysAsync(keys, cancellationToken);
     }
 
     public async Task<ActionResult<KeyListResult>> GetKeyVersionsAsync(
@@ -201,16 +196,14 @@ internal sealed partial class KeysControllerImpl(
     {
         // TODO: implement paging
         List<KeyBundle>? keys = await store
-            .ListObjectVersionsAsync(key_name, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ListObjectVersionsAsync(key_name, cancellationToken);
 
         if (null == keys)
         {
             return new NotFoundResult();
         }
 
-        return await ListKeysAsync(keys, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await ListKeysAsync(keys, cancellationToken);
     }
 
     public async Task<ActionResult<KeyBundle>> ImportKeyAsync(
@@ -236,8 +229,7 @@ internal sealed partial class KeysControllerImpl(
                                      version,
                                      isLatestVersion: true,
                                      key,
-                                     cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+                                     cancellationToken);
 
         return key;
     }
@@ -253,13 +245,45 @@ internal sealed partial class KeysControllerImpl(
         throw new NotSupportedException();
     }
 
-    public Task<ActionResult<KeyBundle>> RotateKeyAsync(
+    public async Task<ActionResult<KeyBundle>> RotateKeyAsync(
         string key_name,
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/rotate-key/rotate-key?view=rest-keyvault-keys-7.4&tabs=HTTP
-        throw new NotSupportedException();
+        KeyBundle? curVersion = await store.ReadObjectAsync(key_name, null, cancellationToken);
+        if (null == curVersion)
+        {
+            return new NotFoundResult();
+        }
+
+        KeyRotationPolicy? curPolicy = await rotationPolicyStore
+            .ReadObjectAsync(key_name, KeyRotationPolicyInstance, cancellationToken);
+
+        string version = Guid.NewGuid().ToString("N");
+        Uri id = GetKeyUrl(key_name, version);
+        JsonWebKey jwk = GenerateKey(id, curVersion.Key!);
+        KeyAttributes attributes = Update(curVersion.Attributes);
+        TimeSpan? expiryTime = curPolicy?.Attributes?.ExpireTimeSpan;
+        if (expiryTime.HasValue)
+        {
+            attributes.Exp = DateTimeOffset.UtcNow.Add(expiryTime.Value).ToUnixSeconds();
+        }
+        KeyBundle key = new()
+        {
+            Key = jwk,
+            Attributes = attributes,
+            Tags = curVersion.Tags,
+            Managed = false,
+            Release_policy = curVersion.Release_policy,
+        };
+
+        await store.StoreObjectAsync(key_name,
+                                     version,
+                                     isLatestVersion: true,
+                                     key,
+                                     cancellationToken);
+
+        return key;
     }
 
     public async Task<ActionResult<KeyBundle>> UpdateKeyAsync(
@@ -269,8 +293,7 @@ internal sealed partial class KeysControllerImpl(
         KeyUpdateParameters body,
         CancellationToken cancellationToken = default)
     {
-        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
 
         if (null == bundle)
         {
@@ -286,29 +309,56 @@ internal sealed partial class KeysControllerImpl(
                                      key_version,
                                      isLatestVersion: false,
                                      bundle,
-                                     cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+                                     cancellationToken);
 
         return bundle;
     }
 
-    public Task<ActionResult<KeyRotationPolicy>> GetKeyRotationPolicyAsync(
+    public async Task<ActionResult<KeyRotationPolicy>> GetKeyRotationPolicyAsync(
         string key_name,
         string api_version,
         CancellationToken cancellationToken = default)
     {
-        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/get-key-rotation-policy/get-key-rotation-policy?view=rest-keyvault-keys-7.4&tabs=HTTP
-        throw new NotSupportedException();
+        if (!await store.ObjectExistsAsync(key_name, cancellationToken))
+        {
+            return new NotFoundResult();
+        }
+
+        KeyRotationPolicy? policy = await rotationPolicyStore
+            .ReadObjectAsync(key_name, KeyRotationPolicyInstance, cancellationToken);
+
+        if (null == policy)
+        {
+            return new NotFoundResult();
+        }
+
+        return policy;
     }
 
-    public Task<ActionResult<KeyRotationPolicy>> UpdateKeyRotationPolicyAsync(
+    public async Task<ActionResult<KeyRotationPolicy>> UpdateKeyRotationPolicyAsync(
         string key_name,
         string api_version,
         KeyRotationPolicy body,
         CancellationToken cancellationToken = default)
     {
-        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/update-key-rotation-policy/update-key-rotation-policy?view=rest-keyvault-keys-7.4&tabs=HTTP
-        throw new NotSupportedException();
+        if (!await store.ObjectExistsAsync(key_name, cancellationToken))
+        {
+            return new NotFoundResult();
+        }
+
+        KeyRotationPolicy? curPolicy = await rotationPolicyStore
+            .ReadObjectAsync(key_name, KeyRotationPolicyInstance, cancellationToken);
+
+        body.Id = GetKeyRotationPolicyUrl(key_name).ToString();
+        body.Attributes = Update(body.Attributes, curPolicy?.Attributes);
+
+        await rotationPolicyStore.StoreObjectAsync(key_name,
+                                                   KeyRotationPolicyInstance,
+                                                   true,
+                                                   body,
+                                                   cancellationToken);
+
+        return body;
     }
 
     /*
@@ -327,8 +377,7 @@ internal sealed partial class KeysControllerImpl(
         KeyOperationsParameters body,
         CancellationToken cancellationToken = default)
     {
-        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
 
         if (null == bundle || null == bundle.Key)
         {
@@ -345,8 +394,7 @@ internal sealed partial class KeysControllerImpl(
         KeyOperationsParameters body,
         CancellationToken cancellationToken = default)
     {
-        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
 
         if (null == bundle || null == bundle.Key)
         {
@@ -383,8 +431,7 @@ internal sealed partial class KeysControllerImpl(
         KeySignParameters body,
         CancellationToken cancellationToken = default)
     {
-        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
 
         if (null == bundle || null == bundle.Key)
         {
@@ -401,8 +448,7 @@ internal sealed partial class KeysControllerImpl(
         KeyVerifyParameters body,
         CancellationToken cancellationToken = default)
     {
-        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
 
         if (null == bundle || null == bundle.Key)
         {
@@ -428,14 +474,29 @@ internal sealed partial class KeysControllerImpl(
         return keyUrl.Uri;
     }
 
+    private Uri GetKeyRotationPolicyUrl(string key_name)
+    {
+        Debug.Assert(null != httpContextAccessor.HttpContext,
+            "The HttpContext must not be null.");
+
+        UriBuilder rotationPolicyUrl = new()
+        {
+            Scheme = httpContextAccessor.HttpContext.Request.Scheme,
+            Host = httpContextAccessor.HttpContext.Request.Host.Host,
+            Port = httpContextAccessor.HttpContext.Request.Host.Port ?? -1,
+            Path = $"keys/{key_name}/rotationpolicy"
+        };
+
+        return rotationPolicyUrl.Uri;
+    }
+
     private async Task<KeyBundle?> GetKeyFromStoreAsync(
         string name,
         string version,
         CancellationToken cancellationToken)
     {
         KeyBundle? bundle = await store
-            .ReadObjectAsync(name, version, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+            .ReadObjectAsync(name, version, cancellationToken);
 
         return bundle;
     }
@@ -447,24 +508,67 @@ internal sealed partial class KeysControllerImpl(
             Kid = id.ToString(),
             Kty = (JsonWebKeyKty)(int)keyParams.Kty,
             Key_ops = keyParams.Key_ops?.Select(o => o.ToString()).ToList(),
+
+            Crv = (JsonWebKeyCrv?)(int?)keyParams.Crv,
         };
 
-        switch (keyParams.Kty)
+        return GenerateKey(key, keyParams.Key_size);
+    }
+
+    private static JsonWebKey GenerateKey(Uri id, JsonWebKey prevVersion)
+    {
+        JsonWebKey key = new()
         {
-            case KeyCreateParametersKty.EC:
-                key.Crv = (JsonWebKeyCrv?)(int?)keyParams.Crv;
+            Kid = id.ToString(),
+            Kty = prevVersion.Kty,
+            Key_ops = prevVersion.Key_ops,
+
+            Crv = prevVersion.Crv,
+        };
+
+        int? keySize = null;
+        switch (key.Kty)
+        {
+            case JsonWebKeyKty.RSA:
+            case JsonWebKeyKty.RSAHSM:
+                {
+                    RSAParameters rsaParams = new()
+                    {
+                        Exponent = WebEncoders.Base64UrlDecode(prevVersion.E!),
+                        Modulus = WebEncoders.Base64UrlDecode(prevVersion.N!),
+                    };
+                    using RSA rsa = RSA.Create(rsaParams);
+                    keySize = rsa.KeySize;
+                }
+                break;
+            case JsonWebKeyKty.Oct:
+            case JsonWebKeyKty.OctHSM:
+                keySize = WebEncoders.Base64UrlDecode(prevVersion.K!).Length * 8;
+                break;
+            default:
+                break;
+        }
+
+        return GenerateKey(key, keySize);
+    }
+
+    private static JsonWebKey GenerateKey(JsonWebKey key, int? key_size)
+    {
+        switch (key.Kty)
+        {
+            case JsonWebKeyKty.EC:
                 CreateEcKeyAndPopulateJwk(key);
                 break;
-            case KeyCreateParametersKty.RSA:
-                CreateRsaKeyAndPopulateJwk(keyParams.Key_size, key);
+            case JsonWebKeyKty.RSA:
+                CreateRsaKeyAndPopulateJwk(key_size, key);
                 break;
-            case KeyCreateParametersKty.Oct:
-                CreateAesKeyAndPopulateJwk(keyParams.Key_size, key);
+            case JsonWebKeyKty.Oct:
+                CreateAesKeyAndPopulateJwk(key_size, key);
                 break;
 
-            case KeyCreateParametersKty.ECHSM:
-            case KeyCreateParametersKty.RSAHSM:
-            case KeyCreateParametersKty.OctHSM:
+            case JsonWebKeyKty.ECHSM:
+            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyKty.OctHSM:
             default:
                 throw new NotSupportedException();
         }
@@ -531,6 +635,19 @@ internal sealed partial class KeysControllerImpl(
         return newAttrs;
     }
 
+    private static KeyRotationPolicyAttributes Update(
+        KeyRotationPolicyAttributes? newest,
+        KeyRotationPolicyAttributes? oldest = null)
+    {
+        KeyRotationPolicyAttributes newAttrs = newest ?? oldest ?? new();
+
+        int now = DateTimeOffset.UtcNow.ToUnixSeconds();
+        newAttrs.Created = oldest?.Created ?? now;
+        newAttrs.Updated = now;
+
+        return newAttrs;
+    }
+
     private JsonWebKey Update(JsonWebKey key, List<Key_ops>? keyOps)
     {
         if (null != keyOps)
@@ -568,8 +685,7 @@ internal sealed partial class KeysControllerImpl(
             };
             return ValueTask.CompletedTask;
         }
-        await Parallel.ForAsync(0, keys.Count, cancellationToken, Convert)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        await Parallel.ForAsync(0, keys.Count, cancellationToken, Convert);
 
         return new KeyListResult()
         {

@@ -80,8 +80,10 @@ builder.Services
 
     .AddHttpContextAccessor()
     .AddScoped<IKeysController, KeysControllerImpl>()
-    .AddScoped<ISecretsController, SecretsControllerImpl>()
     .AddScoped<IRNGController, RNGControllerImpl>()
+    .AddScoped<ISecretsController, SecretsControllerImpl>()
+    .AddSingleton(UseStoreFactory<KeyBundle>("keys"))
+    .AddSingleton(UseStoreFactory<KeyRotationPolicy>("key-rotation-policies"))
     .AddSingleton(UseStoreFactory<SecretBundle>("secrets"))
     .AddSingleton(UseStoreFactory<KeyBundle>("keys"))
     .AddTransient<RemoveDoubleSlashMiddleware>()
@@ -112,8 +114,8 @@ static Func<IServiceProvider, IStore<T>> UseStoreFactory<T>(
     {
         IOptions<StoreOptions> storeOptions = services.GetRequiredService<IOptions<StoreOptions>>();
         ILogger<Store<T>> logger = services.GetRequiredService<ILogger<Store<T>>>();
-        string secretsStorageDir = Path.Combine(storeOptions.Value.BaseDir, objectType);
-        return new(logger, new(secretsStorageDir), writeOptions, readOptions);
+        string storageDir = Path.Combine(storeOptions.Value.BaseDir, objectType);
+        return new(logger, new(storageDir), writeOptions, readOptions);
     }
 
     return StoreFactory;

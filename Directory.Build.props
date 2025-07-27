@@ -2,7 +2,6 @@
 <Project>
     <PropertyGroup>
         <Nullable>enable</Nullable>
-
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 
         <!-- For GitHub workflows: -->
