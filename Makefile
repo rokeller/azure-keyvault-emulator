@@ -13,3 +13,8 @@ coverage:
 mdtohtml:
 	go install github.com/gomarkdown/mdtohtml@latest
 	mdtohtml -page README.md src/AzureKeyVaultEmulator/index.html
+
+.PHONY: image
+image:
+	dotnet build src/AzureKeyVaultEmulator/
+	docker image build -t keyvault-emulator --build-arg SKIP_CODE_GENERATION=true .

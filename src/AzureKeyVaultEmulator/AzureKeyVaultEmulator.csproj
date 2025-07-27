@@ -23,7 +23,7 @@
     <None Update="index.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <Target Name="MergeOpenApiSpecs" Condition="'$(SKIP_OPENAPI_MERGE)' != 'true'"
+  <Target Name="MergeOpenApiSpecs" Condition="'$(SKIP_CODE_GENERATION)' != 'true'"
     Inputs="$(OpenApiBasePath)/v$(KeyVaultApiVersion)/openapi-merge.json"
     Outputs="$(OpenApiBasePath)/v$(KeyVaultApiVersion)/KeyVault.json">
     <Message Importance="High"
@@ -31,7 +31,7 @@
     <Exec Command="$(OpenApiBasePath)/merge.sh $(KeyVaultApiVersion)" />
   </Target>
 
-  <Target Name="GenerateOpenApiControllerItems"
+  <Target Name="GenerateOpenApiControllerItems" Condition="'$(SKIP_CODE_GENERATION)' != 'true'"
     DependsOnTargets="MergeOpenApiSpecs">
     <Message Importance="High"
       Text="Generating items for OpenApiController ..." />

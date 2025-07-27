@@ -43,9 +43,8 @@ jobs:
             --results-directory .testresults/temp
 
           echo 'Build container image ...'
-          dotnet msbuild -target:MergeOpenApiSpecs src/AzureKeyVaultEmulator/
           docker image build -t azure-keyvault-emulator \
-            --build-arg SKIP_OPENAPI_MERGE=true \
+            --build-arg SKIP_CODE_GENERATION=true \
             .
 
       - name: ReportGenerator
