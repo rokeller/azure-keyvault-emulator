@@ -6,10 +6,11 @@ COPY src/AzureKeyVaultEmulator/packages.lock.json ./AzureKeyVaultEmulator/
 RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         --use-lock-file --locked-mode
 
-ARG SKIP_OPENAPI_MERGE
-ENV SKIP_OPENAPI_MERGE=${SKIP_OPENAPI_MERGE:-false}
+ARG SKIP_CODE_GENERATION
+ENV SKIP_CODE_GENERATION=${SKIP_CODE_GENERATION:-false}
 
 COPY src .
+COPY Directory.Build.* .
 RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         -c Release -o publish --no-restore && \
     rm /app/publish/packages.lock.json && \
