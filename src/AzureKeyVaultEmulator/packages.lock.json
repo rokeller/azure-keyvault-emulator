@@ -5,8 +5,8 @@
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Direct",
         "requested": "[8.0.*, )",
-        "resolved": "8.0.15",
-        "contentHash": "41DQAWCOIDS9ZzW6hWCShRiVrBLvz2QqR+i0VhMa4JHuQLNW2axfiWgEbB8jYt8try1ez2Q+z1PfF3vbl+B9gA==",
+        "resolved": "8.0.18",
+        "contentHash": "Ty49uva5oIFa7nOkeL+6TGRU7DQohBaEGs+QcGoGSXq4d7MZnNueLte0HFa9WHvjZUDfJSQ1PVmWkFeIYS1w4Q==",
         "dependencies": {
           "Microsoft.IdentityModel.Protocols.OpenIdConnect": "7.1.2"
         }
@@ -14,8 +14,8 @@
       "NSwag.MSBuild": {
         "type": "Direct",
         "requested": "[14.*, )",
-        "resolved": "14.3.0",
-        "contentHash": "S1H7SHj1+CI7ZrLJh5UVrvNQWMInvKf8SOjKv6UCVK4S/jh/Wc3V6QFqTlZkQj1/AklBNiZ+h+r4kW9vt/yypg=="
+        "resolved": "14.4.0",
+        "contentHash": "B3E3iGDzTE6jTUHnRiitlXQSGh0NGl0c1wI5zr2/OGS1/oXoxrbKZw3xgNF2opPpDei5pRNbxFJeo7RDMh9log=="
       },
       "Microsoft.IdentityModel.Abstractions": {
         "type": "Transitive",

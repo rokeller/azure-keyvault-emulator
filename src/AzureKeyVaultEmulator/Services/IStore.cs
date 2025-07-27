@@ -117,4 +117,18 @@ public interface IStore<T>
     /// A <see cref="Task"/> that tracks completion of the operation.
     /// </returns>
     Task DeleteObjectAsync(string key, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes an object from the store asynchronously, if it exists.
+    /// </summary>
+    /// <param name="key">
+    /// The key of the object to delete.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The <see cref="CancellationToken"/> to use.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that tracks completion of the operation.
+    /// </returns>
+    Task DeleteObjectIfExistsAsync(string key, CancellationToken cancellationToken);
 }

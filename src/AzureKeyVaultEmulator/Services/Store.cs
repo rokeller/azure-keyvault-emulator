@@ -60,15 +60,13 @@ internal sealed class Store<T> : IStore<T>
 
         if (null == version)
         {
-            return await ReadRedirectedObjectAsync(file, cancellationToken)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+            return await ReadRedirectedObjectAsync(file, cancellationToken);
         }
         else
         {
             using FileStream fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
             return await JsonSerializer
-                .DeserializeAsync<T>(fs, readOptions, cancellationToken)
-                .ConfigureAwait(false);
+                .DeserializeAsync<T>(fs, readOptions, cancellationToken);
         }
     }
 
@@ -108,14 +106,13 @@ internal sealed class Store<T> : IStore<T>
             JsonSerializer.Serialize(utf8JsonWriter, obj, writeOptions);
 
             // Flush the writer to ensure data is written to the file
-            await utf8JsonWriter.FlushAsync(CancellationToken.None)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+            await utf8JsonWriter.FlushAsync(CancellationToken.None);
         }
 
         if (isLatestVersion)
         {
             // Update the 'latest' redirect to point to this version.
-            await UpdateLatestAsync(key, version).ConfigureAwait(ConfigureAwaitOptions.None);
+            await UpdateLatestAsync(key, version);
         }
     }
 
@@ -128,6 +125,25 @@ internal sealed class Store<T> : IStore<T>
 
         latest.Delete();
         versionsDir.Delete(recursive: true);
+
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteObjectIfExistsAsync(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        FileInfo latest = GetFileForObject(key, null);
+        DirectoryInfo versionsDir = GetDirForObjectVersions(key);
+
+        if (latest.Exists)
+        {
+            latest.Delete();
+        }
+        if (versionsDir.Exists)
+        {
+            versionsDir.Delete(recursive: true);
+        }
 
         return Task.CompletedTask;
     }
@@ -147,14 +163,12 @@ internal sealed class Store<T> : IStore<T>
         CancellationToken cancellationToken)
     {
         using StreamReader reader = new(redirectingFile.FullName);
-        string version = await reader.ReadToEndAsync(cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        string version = await reader.ReadToEndAsync(cancellationToken);
 
         string key = Path.GetFileNameWithoutExtension(redirectingFile.Name);
         FileInfo versionFile = GetFileForObject(key, version);
 
-        return await ReadObjectAsync(versionFile, cancellationToken)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        return await ReadObjectAsync(versionFile, cancellationToken);
     }
 
     private async Task<List<T>?> ReadRedirectedObjectsAsync(
@@ -165,12 +179,10 @@ internal sealed class Store<T> : IStore<T>
 
         async ValueTask ReadAsync(int index, CancellationToken cancellationToken)
         {
-            T? item = await ReadRedirectedObjectAsync(files[index], cancellationToken)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+            T? item = await ReadRedirectedObjectAsync(files[index], cancellationToken);
             result[index] = item!;
         }
-        await Parallel.ForAsync(0, files.Length, cancellationToken, ReadAsync)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        await Parallel.ForAsync(0, files.Length, cancellationToken, ReadAsync);
 
         return result.ToList();
     }
@@ -183,11 +195,9 @@ internal sealed class Store<T> : IStore<T>
 
         async ValueTask ReadAsync(int index, CancellationToken cancellationToken)
         {
-            result[index] = await ReadObjectAsync(files[index], cancellationToken)
-                .ConfigureAwait(ConfigureAwaitOptions.None);
+            result[index] = await ReadObjectAsync(files[index], cancellationToken);
         }
-        await Parallel.ForAsync(0, files.Length, cancellationToken, ReadAsync)
-            .ConfigureAwait(ConfigureAwaitOptions.None);
+        await Parallel.ForAsync(0, files.Length, cancellationToken, ReadAsync);
 
         return result.ToList();
     }
@@ -223,7 +233,7 @@ internal sealed class Store<T> : IStore<T>
             using FileStream fs = File.Open(tempFile.FullName, FileMode.Create);
             using StreamWriter writer = new(fs);
 
-            await writer.WriteAsync(version).ConfigureAwait(ConfigureAwaitOptions.None);
+            await writer.WriteAsync(version);
             await writer.FlushAsync(default);
         }
 
