@@ -10,6 +10,7 @@ ARG SKIP_OPENAPI_MERGE
 ENV SKIP_OPENAPI_MERGE=${SKIP_OPENAPI_MERGE:-false}
 
 COPY src .
+COPY Directory.Build.* .
 RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         -c Release -o publish --no-restore && \
     rm /app/publish/packages.lock.json && \
