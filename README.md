@@ -35,6 +35,9 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 
 ## Supported Operations
 
+The tables below show which operations are supported by the emulator. Please
+note that any operations that require an HSM are **not** supported.
+
 ### Keys
 
 | Operation | EC | RSA | AES |
@@ -50,9 +53,9 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 | Release Key (Export Key) | 🚫 | 🚫 | 🚫 |
 | Backup Key | ✅ <sup>*</sup> | ✅ <sup>*</sup> | ✅ <sup>*</sup> |
 | Restore Key | ✅ <sup>*</sup> | ✅ <sup>*</sup> | ✅ <sup>*</sup> |
-| Rotate Key | 🚫 | 🚫 | 🚫 |
-| Get Key Rotation Policy | 🚫 | 🚫 | 🚫 |
-| Update Key Rotation Policy | 🚫 | 🚫 | 🚫 |
+| Rotate Key | ✅ | ✅ | ✅ |
+| Get Key Rotation Policy | ✅ | ✅ | ✅ |
+| Update Key Rotation Policy | ✅ | ✅ | ✅ |
 | **Crypto Operations** |
 | Encrypt / Decrypt | ⛔ | ✅ | 🚫 |
 | Wrap / Unwrap | ⛔ | ✅  | 🚫 |
@@ -69,7 +72,11 @@ The container by default exposes only the HTTPS endpoints on port 11001.
 with the Azure Key Vault service's backup format and it is not encrypted. However,
 keys backed up from the emulator can be restored with the emulator.
 
-> **Note**: Deleted key APIs are not supported. Deletion of keys purges them immediately.
+> **Note**:
+>  * Deleted key APIs are not supported - Deletion of keys purges them
+>    immediately.
+>  * Key rotation itself is **not** implemented, that is the key
+>    rotation itself is without effect and no events are published.
 
 ### Random Number Generation
 
