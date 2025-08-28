@@ -28,14 +28,13 @@ partial class KeysApisTests
     }
 
     [Fact]
-    public async Task GetKeyVersionsReturns404ForInexistentKey()
+    public async Task GetKeyVersionsReturnsEmptyPageForInexistentKey()
     {
         string name = Guid.NewGuid().ToString();
 
         AsyncPageable<KeyProperties> versions = client.GetPropertiesOfKeyVersionsAsync(name);
         IAsyncEnumerator<KeyProperties> enumerator = versions.GetAsyncEnumerator();
-        RequestFailedException ex = await Assert.ThrowsAsync<RequestFailedException>(
-            () => enumerator.MoveNextAsync().AsTask());
-        Assert.Equal(404, ex.Status);
+        Assert.False(await enumerator.MoveNextAsync());
+        Assert.Empty(versions.ToBlockingEnumerable(default));
     }
 }

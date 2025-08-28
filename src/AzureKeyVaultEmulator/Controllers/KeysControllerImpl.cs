@@ -200,7 +200,10 @@ internal sealed partial class KeysControllerImpl(
 
         if (null == keys)
         {
-            return new NotFoundResult();
+            // The documentation isn't very clear about this, but the actual
+            // Key Vault APIs do NOT respond with a 404 (Not Found) when the
+            // key doesn't exist. Instead, they just return an empty page.
+            keys = [];
         }
 
         return await ListKeysAsync(keys, cancellationToken);

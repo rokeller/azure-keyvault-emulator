@@ -140,7 +140,10 @@ internal sealed partial class SecretsControllerImpl(
 
         if (null == secrets)
         {
-            return new NotFoundResult();
+            // The documentation isn't very clear about this, but the actual
+            // Key Vault APIs do NOT respond with a 404 (Not Found) when the
+            // secret doesn't exist. Instead, they just return an empty page.
+            secrets = [];
         }
 
         return await ListSecretsAsync(secrets, cancellationToken);
