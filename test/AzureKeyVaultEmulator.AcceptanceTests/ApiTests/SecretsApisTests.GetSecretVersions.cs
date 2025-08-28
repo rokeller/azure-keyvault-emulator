@@ -28,14 +28,13 @@ partial class SecretsApisTests
     }
 
     [Fact]
-    public async Task GetSecretVersionsReturns404ForInexistentSecret()
+    public async Task GetSecretVersionsReturnsEmptyPageForInexistentSecret()
     {
         string name = Guid.NewGuid().ToString();
 
         AsyncPageable<SecretProperties> versions = client.GetPropertiesOfSecretVersionsAsync(name);
         IAsyncEnumerator<SecretProperties> enumerator = versions.GetAsyncEnumerator();
-        RequestFailedException ex = await Assert.ThrowsAsync<RequestFailedException>(
-            () => enumerator.MoveNextAsync().AsTask());
-        Assert.Equal(404, ex.Status);
+        Assert.False(await enumerator.MoveNextAsync());
+        Assert.Empty(versions.ToBlockingEnumerable(default));
     }
 }
