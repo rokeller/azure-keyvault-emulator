@@ -4,9 +4,12 @@ updates:
     directory: /
     schedule:
       interval: daily
+      time: "05:12"
+      timezone: Europe/Zurich
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: daily
-
+      time: "05:12"
+      timezone: Europe/Zurich
