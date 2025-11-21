@@ -132,7 +132,7 @@ For example:
 
 ```bash
 curl -X 'GET' \
-  'https://localhost.vault.azure.net:11001/secrets/foo' \
+  'https://localhost.vault.azure.net:11001/secrets/foo?api-version=7.4' \
   -H 'accept: application/json' \
   -H 'Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjQxMDI0NDQ4MDAsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0LyJ9.42D_zJ3qM02NM_ExWU9S9jvNGMfpop3YuWT9lFqJ5yU'
 ```
@@ -162,5 +162,5 @@ The same goes for the path to the directory in which to persist keys and secrets
 
 ## Development
 
-All tests work against an in-memory [test server](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.testhost.testserver?view=aspnetcore-8.0).
+All tests work against an in-memory [test server](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.testhost.testserver?view=aspnetcore-10.0).
 Simply running `dotnet test` should give developers a good idea of the quality.

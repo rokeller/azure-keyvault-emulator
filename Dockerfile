@@ -1,6 +1,7 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0-noble AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /app
 
+COPY Directory.Build.* ./
 COPY src/AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj ./AzureKeyVaultEmulator/
 COPY src/AzureKeyVaultEmulator/packages.lock.json ./AzureKeyVaultEmulator/
 RUN dotnet restore AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
@@ -10,15 +11,13 @@ ARG SKIP_CODE_GENERATION
 ENV SKIP_CODE_GENERATION=${SKIP_CODE_GENERATION:-false}
 
 COPY src .
-COPY Directory.Build.* .
 RUN dotnet publish AzureKeyVaultEmulator/AzureKeyVaultEmulator.csproj \
         -c Release -o publish --no-restore && \
-    rm /app/publish/packages.lock.json && \
     mkdir -p /app/publish/.vault
 
 ########################################
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-noble-chiseled
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled
 WORKDIR /app
 
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
@@ -28,5 +27,5 @@ ENTRYPOINT ["dotnet", "AzureKeyVaultEmulator.dll"]
 VOLUME ["/app/.vault"]
 VOLUME ["/app/.certs"]
 
-COPY .certs/emulator.pfx .certs/emulator.pfx
+COPY --link .certs/emulator.pfx .certs/emulator.pfx
 COPY --chown=app:app --chmod=755 --link --from=build /app/publish .

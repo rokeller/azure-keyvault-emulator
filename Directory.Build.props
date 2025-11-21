@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Project>
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+        <FrameworkWildcardDependencies>10.0.*</FrameworkWildcardDependencies>
 
         <!-- For GitHub workflows: -->
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' == 'true'">
-       <RestoreLockedMode>true</RestoreLockedMode>
+        <RestoreLockedMode>true</RestoreLockedMode>
     </PropertyGroup>
 </Project>

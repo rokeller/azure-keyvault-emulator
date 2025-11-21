@@ -18,3 +18,7 @@ mdtohtml:
 image:
 	dotnet build src/AzureKeyVaultEmulator/
 	docker image build -t keyvault-emulator --build-arg SKIP_CODE_GENERATION=true .
+
+.PHONY: run-container
+run-container:
+	docker container run --rm -it -p 11001:11001 -v ${PWD}/.vault:/app/.vault keyvault-emulator
