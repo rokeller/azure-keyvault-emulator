@@ -36,7 +36,7 @@ builder.Services
     })
     .Services
     .AddSingleton<IEnumToStringConvertible<Key_ops>>(EnumStringValueConverter.Create<Key_ops>())
-    .AddSingleton<IEnumToStringConvertible<key_ops>>(EnumStringValueConverter.Create<key_ops>())
+    .AddSingleton<IEnumToStringConvertible<Key_ops2>>(EnumStringValueConverter.Create<Key_ops2>())
 
     .AddAuthentication(options =>
     {

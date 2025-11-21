@@ -41,14 +41,14 @@
         <MakeDir Directories="%(_PreparedOpenApiItem.OutDir)" />
         <!--
         For help, execute
-        $(NSwagExe_Net80) help openapi2cscontroller
+        $(NSwagExe_Net100) help openapi2cscontroller
 
         Or See
         https://github.com/RicoSuter/NSwag/wiki/CSharpGeneratorBaseSettings
         https://github.com/RicoSuter/NSwag/wiki/NSwag-Configuration-Document
         -->
         <Exec WorkingDirectory="$(ProjectDir)"
-            Command="$(NSwagExe_Net80) %(_PreparedOpenApiItem.Args)" />
+            Command="$(NSwagExe_Net100) %(_PreparedOpenApiItem.Args)" />
 
         <ItemGroup>
             <Compile Include="%(_PreparedOpenApiItem.OutFile)" KeepDuplicates="false" />

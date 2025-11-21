@@ -21,14 +21,14 @@ internal sealed partial class KeysControllerImpl(
     IStore<KeyBundle> store,
     IStore<KeyRotationPolicy> rotationPolicyStore,
     IEnumToStringConvertible<Key_ops> keyOpsConverter1,
-    IEnumToStringConvertible<key_ops> keyOpsConverter2,
+    IEnumToStringConvertible<Key_ops2> keyOpsConverter2,
     IHttpContextAccessor httpContextAccessor) : IKeysController
 {
     private const string KeyRotationPolicyInstance = "instance";
     private readonly IStore<KeyBundle> store = store;
     private readonly IStore<KeyRotationPolicy> rotationPolicyStore = rotationPolicyStore;
     private readonly IEnumToStringConvertible<Key_ops> keyOpsConverter1 = keyOpsConverter1;
-    private readonly IEnumToStringConvertible<key_ops> keyOpsConverter2 = keyOpsConverter2;
+    private readonly IEnumToStringConvertible<Key_ops2> keyOpsConverter2 = keyOpsConverter2;
     private readonly IHttpContextAccessor httpContextAccessor = httpContextAccessor;
 
     private static readonly JsonSerializerOptions SkipNull = new()
@@ -661,7 +661,7 @@ internal sealed partial class KeysControllerImpl(
         return key;
     }
 
-    private JsonWebKey Update(JsonWebKey key, List<key_ops>? keyOps)
+    private JsonWebKey Update(JsonWebKey key, List<Key_ops2>? keyOps)
     {
         if (null != keyOps)
         {
