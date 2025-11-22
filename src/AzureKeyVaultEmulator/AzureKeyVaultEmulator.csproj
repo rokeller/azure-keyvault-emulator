@@ -15,10 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="AzureKeyVaultEmulator.AcceptanceTests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="index.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

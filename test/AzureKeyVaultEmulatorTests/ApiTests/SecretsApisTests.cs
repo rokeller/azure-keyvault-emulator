@@ -4,7 +4,7 @@ using Azure.Core.Pipeline;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
+namespace AzureKeyVaultEmulator.ApiTests;
 
 public sealed partial class SecretsApisTests : IDisposable
 {

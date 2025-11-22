@@ -6,7 +6,7 @@ using Azure.Security.KeyVault.Keys;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
+namespace AzureKeyVaultEmulator.ApiTests;
 
 public sealed class RngApisTests : IDisposable
 {

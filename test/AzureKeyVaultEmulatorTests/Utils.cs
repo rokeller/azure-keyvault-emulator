@@ -1,7 +1,7 @@
 using System;
 using Xunit;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests;
+namespace AzureKeyVaultEmulator;
 
 internal static class Utils
 {
