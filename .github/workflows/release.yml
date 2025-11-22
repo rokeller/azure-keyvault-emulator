@@ -70,6 +70,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Determine image tags
+        run: |
+          bash extract-tags.sh "$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+
       # Install pnpm and node for OpenAPI merge
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -78,7 +82,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: pnpm
           cache-dependency-path: |
             .openapi/pnpm-lock.yaml
@@ -104,11 +108,28 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      # Release builds publish the image with tags <major>, <major>.<minor>, and
+      # <major>.<minor>.<patch>.
       - uses: docker/build-push-action@v6
+        if: ${{ success() && env.VER_MAJOR_MINOR_PATCH == env.VER_FULL }}
         with:
           context: .
           push: true
           build-args: |
             SKIP_CODE_GENERATION=true
           tags: |
-            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_MAJOR }}
+            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_MAJOR_MINOR }}
+            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_MAJOR_MINOR_PATCH }}
+
+      # Pre-release builds always publish the image with just the pre-release
+      # version tag.
+      - uses: docker/build-push-action@v6
+        if: ${{ success() && env.VER_MAJOR_MINOR_PATCH != env.VER_FULL }}
+        with:
+          context: .
+          push: true
+          build-args: |
+            SKIP_CODE_GENERATION=true
+          tags: |
+            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_FULL }}
