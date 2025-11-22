@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
+namespace AzureKeyVaultEmulator.ApiTests;
 
 internal sealed class LocalTokenCredential : TokenCredential
 {

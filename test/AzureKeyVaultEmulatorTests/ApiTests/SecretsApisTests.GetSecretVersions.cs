@@ -5,7 +5,7 @@ using Azure;
 using Azure.Security.KeyVault.Secrets;
 using Xunit;
 
-namespace AzureKeyVaultEmulator.AcceptanceTests.ApiTests;
+namespace AzureKeyVaultEmulator.ApiTests;
 
 partial class SecretsApisTests
 {
