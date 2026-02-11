@@ -4,7 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-        <FrameworkWildcardDependencies>10.0.*</FrameworkWildcardDependencies>
+        <FrameworkWildcardDependencies>10.0.3</FrameworkWildcardDependencies>
 
         <!-- For GitHub workflows: -->
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
