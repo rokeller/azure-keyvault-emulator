@@ -63,8 +63,8 @@ packages:
     resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
     engines: {node: '>=0.10.0'}
 
-  lodash@4.17.21:
-    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
+  lodash@4.17.23:
+    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
 
   node-fetch@2.7.0:
     resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
@@ -119,7 +119,7 @@ snapshots:
   '@iouring-engineering/openapi-merge@1.4.0':
     dependencies:
       atlassian-openapi: 1.0.21
-      lodash: 4.17.21
+      lodash: 4.17.23
       ts-is-present: 1.2.2
 
   ajv@6.12.6:
@@ -164,7 +164,7 @@ snapshots:
 
   jsonpointer@5.0.1: {}
 
-  lodash@4.17.21: {}
+  lodash@4.17.23: {}
 
   node-fetch@2.7.0:
     dependencies:
