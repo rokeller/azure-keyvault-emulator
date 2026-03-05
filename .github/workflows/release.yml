@@ -100,7 +100,7 @@ jobs:
           dotnet restore --locked-mode
           dotnet build --no-restore
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ${{ env.IMAGE_SERVER }}
           username: ${{ github.actor }}
