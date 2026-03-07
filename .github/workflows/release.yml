@@ -110,7 +110,7 @@ jobs:
 
       # Release builds publish the image with tags <major>, <major>.<minor>, and
       # <major>.<minor>.<patch>.
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         if: ${{ success() && env.VER_MAJOR_MINOR_PATCH == env.VER_FULL }}
         with:
           context: .
@@ -124,7 +124,7 @@ jobs:
 
       # Pre-release builds always publish the image with just the pre-release
       # version tag.
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         if: ${{ success() && env.VER_MAJOR_MINOR_PATCH != env.VER_FULL }}
         with:
           context: .
