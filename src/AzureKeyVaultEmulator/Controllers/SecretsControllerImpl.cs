@@ -93,6 +93,9 @@ internal sealed partial class SecretsControllerImpl(
         string secret_name,
         string secret_version,
 #endif
+#if KEYVAULT_API_20250701_OR_LATER
+        OutContentType? outContentType, // Introduced with '2025-07-01'
+#endif
         CancellationToken cancellationToken = default)
     {
         SecretBundle? bundle = await store
@@ -261,6 +264,8 @@ internal sealed partial class SecretsControllerImpl(
 
 #if KEYVAULT_API_7_4
         return await GetSecretAsync(secretName, null!, api_version, cancellationToken);
+#elif KEYVAULT_API_20250701_OR_LATER
+        return await GetSecretAsync(api_version, secretName, null!, null, cancellationToken);
 #elif KEYVAULT_API_7_5_OR_LATER
         return await GetSecretAsync(api_version, secretName, null!, cancellationToken);
 #endif
