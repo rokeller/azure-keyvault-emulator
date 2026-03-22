@@ -3,6 +3,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AzureKeyVaultEmulator.Controllers;
 
+#if KEYVAULT_API_7_4
+using JsonWebKeyEncryptionAlgorithm = AzureKeyVaultEmulator.Controllers.KeyOperationsParametersAlg;
+#endif
+
 namespace AzureKeyVaultEmulator.Converters;
 
 internal sealed class KeyOperationsParametersConverter : JsonConverter<KeyOperationsParameters>
@@ -23,7 +27,7 @@ internal sealed class KeyOperationsParametersConverter : JsonConverter<KeyOperat
                     switch (reader.GetString())
                     {
                         case "alg":
-                            res.Alg = JsonSerializer.Deserialize<KeyOperationsParametersAlg>(ref reader, options);
+                            res.Alg = JsonSerializer.Deserialize<JsonWebKeyEncryptionAlgorithm>(ref reader, options);
                             break;
                         case "value":
                             res.Value = JsonSerializer.Deserialize<string>(ref reader, options)!;

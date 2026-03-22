@@ -15,20 +15,30 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 
+#if KEYVAULT_API_7_4
+using JsonWebKeyOperation = AzureKeyVaultEmulator.Controllers.Key_ops;
+using JsonWebKeyType = AzureKeyVaultEmulator.Controllers.JsonWebKeyKty;
+using JsonWebKeyCurveName = AzureKeyVaultEmulator.Controllers.JsonWebKeyCrv;
+#endif
+
 namespace AzureKeyVaultEmulator.Controllers;
 
 internal sealed partial class KeysControllerImpl(
     IStore<KeyBundle> store,
     IStore<KeyRotationPolicy> rotationPolicyStore,
-    IEnumToStringConvertible<Key_ops> keyOpsConverter1,
+    IEnumToStringConvertible<JsonWebKeyOperation> keyOpsConverter1,
+#if KEYVAULT_API_7_4
     IEnumToStringConvertible<Key_ops2> keyOpsConverter2,
+#endif
     IHttpContextAccessor httpContextAccessor) : IKeysController
 {
     private const string KeyRotationPolicyInstance = "instance";
     private readonly IStore<KeyBundle> store = store;
     private readonly IStore<KeyRotationPolicy> rotationPolicyStore = rotationPolicyStore;
-    private readonly IEnumToStringConvertible<Key_ops> keyOpsConverter1 = keyOpsConverter1;
+    private readonly IEnumToStringConvertible<JsonWebKeyOperation> keyOpsConverter1 = keyOpsConverter1;
+#if KEYVAULT_API_7_4
     private readonly IEnumToStringConvertible<Key_ops2> keyOpsConverter2 = keyOpsConverter2;
+#endif
     private readonly IHttpContextAccessor httpContextAccessor = httpContextAccessor;
 
     private static readonly JsonSerializerOptions SkipNull = new()
@@ -37,8 +47,13 @@ internal sealed partial class KeysControllerImpl(
     };
 
     public async Task<ActionResult<BackupKeyResult>> BackupKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         CancellationToken cancellationToken = default)
     {
         List<KeyBundle>? keys = await store
@@ -108,12 +123,21 @@ internal sealed partial class KeysControllerImpl(
                 keyName, version, (pos++) == 0, versionData, cancellationToken);
         }
 
+#if KEYVAULT_API_7_4
         return await GetKeyAsync(keyName, null!, api_version, cancellationToken);
+#elif KEYVAULT_API_7_5_OR_LATER
+        return await GetKeyAsync(api_version, keyName, null!, cancellationToken);
+#endif
     }
 
     public async Task<ActionResult<KeyBundle>> CreateKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         KeyCreateParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -140,8 +164,13 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<DeletedKeyBundle>> DeleteKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         CancellationToken cancellationToken = default)
     {
         await Task.WhenAll(
@@ -162,9 +191,15 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyBundle>> GetKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         CancellationToken cancellationToken = default)
     {
         KeyBundle? bundle = await GetKeyFromStoreAsync(key_name, key_version, cancellationToken);
@@ -177,9 +212,33 @@ internal sealed partial class KeysControllerImpl(
         return bundle;
     }
 
+#if KEYVAULT_API_7_6_OR_LATER
+    public async Task<ActionResult<KeyBundle>> GetKeyAttestationAsync(
+        string api_version,
+        string key_name,
+        string key_version,
+        CancellationToken cancellationToken = default)
+    {
+        // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/get-key-attestation/get-key-attestation?view=rest-keyvault-keys-2025-07-01&tabs=HTTP
+        return new BadRequestObjectResult(new
+        {
+            error = new
+            {
+                code = "BadParameter",
+                message = "Method GET does not allow operation 'attestation'",
+            },
+        });
+    }
+#endif
+
     public async Task<ActionResult<KeyListResult>> GetKeysAsync(
+#if KEYVAULT_API_7_4
         int? maxresults,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        int? maxresults,
+#endif
         CancellationToken cancellationToken = default)
     {
         // TODO: implement paging
@@ -189,9 +248,15 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyListResult>> GetKeyVersionsAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         int? maxresults,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        int? maxresults,
+#endif
         CancellationToken cancellationToken = default)
     {
         // TODO: implement paging
@@ -210,8 +275,13 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyBundle>> ImportKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         KeyImportParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -238,9 +308,15 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public Task<ActionResult<KeyReleaseResult>> ReleaseAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyReleaseParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -249,8 +325,13 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyBundle>> RotateKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         CancellationToken cancellationToken = default)
     {
         KeyBundle? curVersion = await store.ReadObjectAsync(key_name, null, cancellationToken);
@@ -290,9 +371,15 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyBundle>> UpdateKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyUpdateParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -318,8 +405,13 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyRotationPolicy>> GetKeyRotationPolicyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         CancellationToken cancellationToken = default)
     {
         if (!await store.ObjectExistsAsync(key_name, cancellationToken))
@@ -339,8 +431,13 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyRotationPolicy>> UpdateKeyRotationPolicyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+#endif
         KeyRotationPolicy body,
         CancellationToken cancellationToken = default)
     {
@@ -374,9 +471,15 @@ internal sealed partial class KeysControllerImpl(
     */
 
     public async Task<ActionResult<KeyOperationResult>> EncryptAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyOperationsParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -391,9 +494,15 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyOperationResult>> DecryptAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyOperationsParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -408,29 +517,55 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public Task<ActionResult<KeyOperationResult>> WrapKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyOperationsParameters body,
         CancellationToken cancellationToken = default)
     {
+#if KEYVAULT_API_7_4
         return EncryptAsync(key_name, key_version, api_version, body, cancellationToken);
+#elif KEYVAULT_API_7_5_OR_LATER
+        return EncryptAsync(api_version, key_name, key_version, body, cancellationToken);
+#endif
     }
 
     public Task<ActionResult<KeyOperationResult>> UnwrapKeyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyOperationsParameters body,
         CancellationToken cancellationToken = default)
     {
+#if KEYVAULT_API_7_4
         return DecryptAsync(key_name, key_version, api_version, body, cancellationToken);
+#elif KEYVAULT_API_7_5_OR_LATER
+        return DecryptAsync(api_version, key_name, key_version, body, cancellationToken);
+#endif
     }
 
     public async Task<ActionResult<KeyOperationResult>> SignAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeySignParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -445,9 +580,15 @@ internal sealed partial class KeysControllerImpl(
     }
 
     public async Task<ActionResult<KeyVerifyResult>> VerifyAsync(
+#if KEYVAULT_API_7_4
         string key_name,
         string key_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string key_name,
+        string key_version,
+#endif
         KeyVerifyParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -509,10 +650,10 @@ internal sealed partial class KeysControllerImpl(
         JsonWebKey key = new()
         {
             Kid = id.ToString(),
-            Kty = (JsonWebKeyKty)(int)keyParams.Kty,
+            Kty = (JsonWebKeyType)(int)keyParams.Kty,
             Key_ops = keyParams.Key_ops?.Select(o => o.ToString()).ToList(),
 
-            Crv = (JsonWebKeyCrv?)(int?)keyParams.Crv,
+            Crv = (JsonWebKeyCurveName?)(int?)keyParams.Crv,
         };
 
         return GenerateKey(key, keyParams.Key_size);
@@ -532,8 +673,8 @@ internal sealed partial class KeysControllerImpl(
         int? keySize = null;
         switch (key.Kty)
         {
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 {
                     RSAParameters rsaParams = new()
                     {
@@ -544,8 +685,8 @@ internal sealed partial class KeysControllerImpl(
                     keySize = rsa.KeySize;
                 }
                 break;
-            case JsonWebKeyKty.Oct:
-            case JsonWebKeyKty.OctHSM:
+            case JsonWebKeyType.Oct:
+            case JsonWebKeyType.OctHSM:
                 keySize = WebEncoders.Base64UrlDecode(prevVersion.K!).Length * 8;
                 break;
             default:
@@ -559,19 +700,19 @@ internal sealed partial class KeysControllerImpl(
     {
         switch (key.Kty)
         {
-            case JsonWebKeyKty.EC:
+            case JsonWebKeyType.EC:
                 CreateEcKeyAndPopulateJwk(key);
                 break;
-            case JsonWebKeyKty.RSA:
+            case JsonWebKeyType.RSA:
                 CreateRsaKeyAndPopulateJwk(key_size, key);
                 break;
-            case JsonWebKeyKty.Oct:
+            case JsonWebKeyType.Oct:
                 CreateAesKeyAndPopulateJwk(key_size, key);
                 break;
 
-            case JsonWebKeyKty.ECHSM:
-            case JsonWebKeyKty.RSAHSM:
-            case JsonWebKeyKty.OctHSM:
+            case JsonWebKeyType.ECHSM:
+            case JsonWebKeyType.RSAHSM:
+            case JsonWebKeyType.OctHSM:
             default:
                 throw new NotSupportedException();
         }
@@ -581,7 +722,7 @@ internal sealed partial class KeysControllerImpl(
 
     private static void CreateEcKeyAndPopulateJwk(JsonWebKey key)
     {
-        (ECDsa ecKey, JsonWebKeyCrv crv) = KeyFactory.CreateEcKey(key.Crv);
+        (ECDsa ecKey, JsonWebKeyCurveName crv) = KeyFactory.CreateEcKey(key.Crv);
         ECParameters ecParams = ecKey.ExportParameters(includePrivateParameters: true);
 
         Debug.Assert(null != ecParams.Q.X);
@@ -651,7 +792,7 @@ internal sealed partial class KeysControllerImpl(
         return newAttrs;
     }
 
-    private JsonWebKey Update(JsonWebKey key, List<Key_ops>? keyOps)
+    private JsonWebKey Update(JsonWebKey key, List<JsonWebKeyOperation>? keyOps)
     {
         if (null != keyOps)
         {
@@ -661,6 +802,7 @@ internal sealed partial class KeysControllerImpl(
         return key;
     }
 
+#if KEYVAULT_API_7_4
     private JsonWebKey Update(JsonWebKey key, List<Key_ops2>? keyOps)
     {
         if (null != keyOps)
@@ -670,6 +812,7 @@ internal sealed partial class KeysControllerImpl(
 
         return key;
     }
+#endif
 
     private async static Task<ActionResult<KeyListResult>> ListKeysAsync(
         List<KeyBundle> keys,

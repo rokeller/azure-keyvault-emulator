@@ -6,16 +6,16 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace AzureKeyVaultEmulator.ApiTests;
 
-public sealed partial class SecretsApisTests : IDisposable
+public abstract partial class SecretsApisTests : IDisposable
 {
     private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly SecretClient client;
 
-    public SecretsApisTests()
+    public SecretsApisTests(SecretClientOptions.ServiceVersion serviceVersion)
     {
         factory.ClientOptions.BaseAddress = new("https://localhost.vault.azure.net/");
-        SecretClientOptions options = new()
+        SecretClientOptions options = new(serviceVersion)
         {
             Transport = new HttpClientTransport(factory.CreateClient()),
             RetryPolicy = new RetryPolicy(maxRetries: 0),

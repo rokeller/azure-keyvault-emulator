@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "cli": "openapi-merge-cli"
+    "cli": "openapi-merge-cli",
+    "add-tags": "node add-tags.js"
   },
   "keywords": [],
   "author": "",

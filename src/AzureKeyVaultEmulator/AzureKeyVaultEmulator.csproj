@@ -3,10 +3,24 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <KeyVaultApiVersion>7.4</KeyVaultApiVersion>
+    <KeyVaultApiVersion>2025-07-01</KeyVaultApiVersion>
+    <KeyVaultApiVersionNumeric>$(KeyVaultApiVersion.Replace('-',''))</KeyVaultApiVersionNumeric>
     <OpenApiBasePath>../../.openapi</OpenApiBasePath>
     <BeforeGenerateOpenApiCode>GenerateOpenApiControllerItems</BeforeGenerateOpenApiCode>
     <BeforeCleanGeneratedOpenApiCode>GenerateOpenApiControllerItems</BeforeCleanGeneratedOpenApiCode>
+
+    <KeyVaultApiVersionConst>$(KeyVaultApiVersion.Replace('.','_').Replace('-',''))</KeyVaultApiVersionConst>
+    <DefineConstants>$(DefineConstants);KEYVAULT_API_$(KeyVaultApiVersionConst)</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(KeyVaultApiVersionNumeric)' >= '7.5' Or '$(KeyVaultApiVersionNumeric)' >= '20250701'">
+    <DefineConstants>$(DefineConstants);KEYVAULT_API_7_5_OR_LATER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(KeyVaultApiVersionNumeric)' >= '7.6' Or '$(KeyVaultApiVersionNumeric)' >= '20250701'">
+    <DefineConstants>$(DefineConstants);KEYVAULT_API_7_6_OR_LATER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(KeyVaultApiVersionNumeric)' >= '20250701'">
+    <DefineConstants>$(DefineConstants);KEYVAULT_API_20250701_OR_LATER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

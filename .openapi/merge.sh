@@ -31,8 +31,9 @@ download_file() {
 BASE_PATH=$(dirname $0)
 pnpm -C $BASE_PATH install
 
-API_VERSION=${1:-7.4}
-BASE_URL='https://raw.githubusercontent.com/Azure/azure-rest-api-specs/refs/heads/release/Microsoft.KeyVault-7.6/specification/keyvault/data-plane/Microsoft.KeyVault/stable'
+API_VERSION=${1:-2025-07-01}
+BRANCH='release-keyvault-Microsoft.KeyVault-stable/2026-04-01'
+BASE_URL="https://raw.githubusercontent.com/Azure/azure-rest-api-specs/refs/heads/$BRANCH/specification/keyvault/data-plane/Microsoft.KeyVault/stable"
 URL_SPEC_COMMON="$BASE_URL/$API_VERSION/common.json"
 URL_SPEC_KEYS="$BASE_URL/$API_VERSION/keys.json"
 URL_SPEC_SECRETS="$BASE_URL/$API_VERSION/secrets.json"
@@ -123,3 +124,8 @@ EOF
 
 # See https://www.npmjs.com/package/openapi-merge-cli
 pnpm -C $BASE_PATH cli --config v$API_VERSION/openapi-merge.json
+
+# Make sure the APIs have proper tags so we can generate separate controllers
+# for Keys, Secrets, and RNG.
+cp -f "$BASE_PATH/v$API_VERSION/KeyVault.json" "$BASE_PATH/v$API_VERSION/KeyVault.orig.json"
+pnpm -C $BASE_PATH add-tags v$API_VERSION/KeyVault.orig.json v$API_VERSION/KeyVault.json

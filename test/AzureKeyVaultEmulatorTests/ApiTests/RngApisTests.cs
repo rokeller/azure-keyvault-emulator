@@ -8,16 +8,16 @@ using Xunit;
 
 namespace AzureKeyVaultEmulator.ApiTests;
 
-public sealed class RngApisTests : IDisposable
+public abstract partial class RngApisTests : IDisposable
 {
     private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly KeyClient client;
 
-    public RngApisTests()
+    public RngApisTests(KeyClientOptions.ServiceVersion serviceVersion)
     {
         factory.ClientOptions.BaseAddress = new("https://localhost.vault.azure.net/");
-        KeyClientOptions options = new()
+        KeyClientOptions options = new(serviceVersion)
         {
             Transport = new HttpClientTransport(factory.CreateClient()),
             RetryPolicy = new RetryPolicy(maxRetries: 0),

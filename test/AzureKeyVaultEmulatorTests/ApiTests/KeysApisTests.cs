@@ -9,25 +9,27 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace AzureKeyVaultEmulator.ApiTests;
 
-public sealed partial class KeysApisTests : IDisposable
+public abstract partial class KeysApisTests : IDisposable
 {
     private readonly WebApplicationFactory<Program> factory = new();
 
     private readonly KeyClient client;
     private readonly HttpClient httpClient;
     private readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
+    private readonly KeyClientOptions.ServiceVersion serviceVersion;
 
-    public KeysApisTests()
+    public KeysApisTests(KeyClientOptions.ServiceVersion serviceVersion)
     {
         factory.ClientOptions.BaseAddress = new("https://localhost.vault.azure.net/");
         httpClient = factory.CreateClient();
-        KeyClientOptions options = new()
+        KeyClientOptions options = new(serviceVersion)
         {
             Transport = new HttpClientTransport(httpClient),
             RetryPolicy = new RetryPolicy(maxRetries: 0),
         };
 
         client = new(factory.ClientOptions.BaseAddress, new LocalTokenCredential(), options);
+        this.serviceVersion = serviceVersion;
     }
 
     public void Dispose()
@@ -37,7 +39,7 @@ public sealed partial class KeysApisTests : IDisposable
 
     private CryptographyClient CreateCryptoClient(KeyVaultKey key)
     {
-        CryptographyClientOptions options = new()
+        CryptographyClientOptions options = new((CryptographyClientOptions.ServiceVersion)serviceVersion)
         {
             Transport = new HttpClientTransport(factory.CreateClient()),
             RetryPolicy = new RetryPolicy(maxRetries: 0),
@@ -49,7 +51,7 @@ public sealed partial class KeysApisTests : IDisposable
 
     private CryptographyClient CreateCryptoClient(Uri keyId)
     {
-        CryptographyClientOptions options = new()
+        CryptographyClientOptions options = new((CryptographyClientOptions.ServiceVersion)serviceVersion)
         {
             Transport = new HttpClientTransport(factory.CreateClient()),
             RetryPolicy = new RetryPolicy(maxRetries: 0),

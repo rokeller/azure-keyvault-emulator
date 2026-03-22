@@ -22,3 +22,8 @@ image:
 .PHONY: run-container
 run-container:
 	docker container run --rm -it -p 11001:11001 -v ${PWD}/.vault:/app/.vault keyvault-emulator
+
+.PHONY: clean
+clean:
+	dotnet clean
+	rm -rf .openapi/v* || true

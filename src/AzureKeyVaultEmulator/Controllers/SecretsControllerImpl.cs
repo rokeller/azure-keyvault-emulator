@@ -28,8 +28,13 @@ internal sealed partial class SecretsControllerImpl(
     };
 
     public async Task<ActionResult<SecretBundle>> SetSecretAsync(
+#if KEYVAULT_API_7_4
         string secret_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string secret_name,
+#endif
         SecretSetParameters body,
         CancellationToken cancellationToken)
     {
@@ -55,8 +60,13 @@ internal sealed partial class SecretsControllerImpl(
     }
 
     public async Task<ActionResult<DeletedSecretBundle>> DeleteSecretAsync(
+#if KEYVAULT_API_7_4
         string secret_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string secret_name,
+#endif
         CancellationToken cancellationToken = default)
     {
         await store.DeleteObjectAsync(secret_name, cancellationToken);
@@ -74,9 +84,18 @@ internal sealed partial class SecretsControllerImpl(
     }
 
     public async Task<ActionResult<SecretBundle>> GetSecretAsync(
+#if KEYVAULT_API_7_4
         string secret_name,
         string secret_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string secret_name,
+        string secret_version,
+#endif
+#if KEYVAULT_API_20250701_OR_LATER
+        OutContentType? outContentType, // Introduced with '2025-07-01'
+#endif
         CancellationToken cancellationToken = default)
     {
         SecretBundle? bundle = await store
@@ -91,9 +110,15 @@ internal sealed partial class SecretsControllerImpl(
     }
 
     public async Task<ActionResult<SecretBundle>> UpdateSecretAsync(
+#if KEYVAULT_API_7_4
         string secret_name,
         string secret_version,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string secret_name,
+        string secret_version,
+#endif
         SecretUpdateParameters body,
         CancellationToken cancellationToken = default)
     {
@@ -119,8 +144,13 @@ internal sealed partial class SecretsControllerImpl(
     }
 
     public async Task<ActionResult<SecretListResult>> GetSecretsAsync(
+#if KEYVAULT_API_7_4
         int? maxresults,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        int? maxresults,
+#endif
         CancellationToken cancellationToken = default)
     {
         // TODO: implement paging
@@ -130,9 +160,15 @@ internal sealed partial class SecretsControllerImpl(
     }
 
     public async Task<ActionResult<SecretListResult>> GetSecretVersionsAsync(
+#if KEYVAULT_API_7_4
         string secret_name,
         int? maxresults,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string secret_name,
+        int? maxresults,
+#endif
         CancellationToken cancellationToken = default)
     {
         List<SecretBundle>? secrets = await store
@@ -150,8 +186,13 @@ internal sealed partial class SecretsControllerImpl(
     }
 
     public async Task<ActionResult<BackupSecretResult>> BackupSecretAsync(
+#if KEYVAULT_API_7_4
         string secret_name,
         string api_version,
+#elif KEYVAULT_API_7_5_OR_LATER
+        string api_version,
+        string secret_name,
+#endif
         CancellationToken cancellationToken = default)
     {
         List<SecretBundle>? secrets = await store
@@ -221,7 +262,13 @@ internal sealed partial class SecretsControllerImpl(
                 secretName, version, (pos++) == 0, versionData, cancellationToken);
         }
 
+#if KEYVAULT_API_7_4
         return await GetSecretAsync(secretName, null!, api_version, cancellationToken);
+#elif KEYVAULT_API_20250701_OR_LATER
+        return await GetSecretAsync(api_version, secretName, null!, null, cancellationToken);
+#elif KEYVAULT_API_7_5_OR_LATER
+        return await GetSecretAsync(api_version, secretName, null!, cancellationToken);
+#endif
     }
 
     private Uri GetSecretUrl(string secret_name, string secret_version)
