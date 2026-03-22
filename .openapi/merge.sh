@@ -123,3 +123,8 @@ EOF
 
 # See https://www.npmjs.com/package/openapi-merge-cli
 pnpm -C $BASE_PATH cli --config v$API_VERSION/openapi-merge.json
+
+# Make sure the APIs have proper tags so we can generate separate controllers
+# for Keys, Secrets, and RNG.
+cp -f "$BASE_PATH/v$API_VERSION/KeyVault.json" "$BASE_PATH/v$API_VERSION/KeyVault.orig.json"
+pnpm -C $BASE_PATH add-tags v$API_VERSION/KeyVault.orig.json v$API_VERSION/KeyVault.json

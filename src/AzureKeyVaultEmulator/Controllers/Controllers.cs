@@ -27,7 +27,11 @@ partial class KeysController
         System.Threading.CancellationToken cancellationToken)
 #pragma warning restore 1573
     {
+#if KEYVAULT_API_7_4
         return _implementation.GetKeyAsync(key_name, null!, api_version, cancellationToken);
+#elif KEYVAULT_API_7_5_OR_LATER
+        return _implementation.GetKeyAsync(api_version, key_name, null!, cancellationToken);
+#endif
     }
 }
 
@@ -54,6 +58,10 @@ partial class SecretsController
         System.Threading.CancellationToken cancellationToken)
 #pragma warning restore 1573
     {
+#if KEYVAULT_API_7_4
         return _implementation.GetSecretAsync(secret_name, null!, api_version, cancellationToken);
+#elif KEYVAULT_API_7_5_OR_LATER
+        return _implementation.GetSecretAsync(api_version, secret_name, null!, cancellationToken);
+#endif
     }
 }

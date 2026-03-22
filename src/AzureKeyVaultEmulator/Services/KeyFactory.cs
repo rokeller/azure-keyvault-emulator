@@ -2,23 +2,27 @@ using System;
 using System.Security.Cryptography;
 using AzureKeyVaultEmulator.Controllers;
 
+#if KEYVAULT_API_7_4
+using JsonWebKeyCurveName = AzureKeyVaultEmulator.Controllers.JsonWebKeyCrv;
+#endif
+
 namespace AzureKeyVaultEmulator.Services;
 
 internal static class KeyFactory
 {
-    private const JsonWebKeyCrv DefaultEcCurve = JsonWebKeyCrv.P256;
+    private const JsonWebKeyCurveName DefaultEcCurve = JsonWebKeyCurveName.P256;
     private const int DefaultRsaKeySize = 2048;
     private const int DefaultAesKeySize = 256;
 
     private static readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
 
-    public static (ECDsa, JsonWebKeyCrv) CreateEcKey(JsonWebKeyCrv? crv)
+    public static (ECDsa, JsonWebKeyCurveName) CreateEcKey(JsonWebKeyCurveName? crv)
     {
         ECCurve curve = (crv ?? DefaultEcCurve) switch
         {
-            JsonWebKeyCrv.P256 => ECCurve.NamedCurves.nistP256,
-            JsonWebKeyCrv.P384 => ECCurve.NamedCurves.nistP384,
-            JsonWebKeyCrv.P521 => ECCurve.NamedCurves.nistP521,
+            JsonWebKeyCurveName.P256 => ECCurve.NamedCurves.nistP256,
+            JsonWebKeyCurveName.P384 => ECCurve.NamedCurves.nistP384,
+            JsonWebKeyCurveName.P521 => ECCurve.NamedCurves.nistP521,
             _ => throw new NotSupportedException(),
         };
         return (ECDsa.Create(curve), crv ?? DefaultEcCurve);

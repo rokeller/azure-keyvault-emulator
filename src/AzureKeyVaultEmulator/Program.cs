@@ -16,6 +16,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 
+#if KEYVAULT_API_7_4
+using JsonWebKeyOperation = AzureKeyVaultEmulator.Controllers.Key_ops;
+#endif
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services
@@ -35,8 +39,10 @@ builder.Services
         converters.Add(new KeyOperationsParametersConverter());
     })
     .Services
-    .AddSingleton<IEnumToStringConvertible<Key_ops>>(EnumStringValueConverter.Create<Key_ops>())
+    .AddSingleton<IEnumToStringConvertible<JsonWebKeyOperation>>(EnumStringValueConverter.Create<JsonWebKeyOperation>())
+#if KEYVAULT_API_7_4
     .AddSingleton<IEnumToStringConvertible<Key_ops2>>(EnumStringValueConverter.Create<Key_ops2>())
+#endif
 
     .AddAuthentication(options =>
     {

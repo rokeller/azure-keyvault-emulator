@@ -4,6 +4,17 @@ using System.Security.Cryptography;
 using AzureKeyVaultEmulator.Controllers;
 using Microsoft.AspNetCore.WebUtilities;
 
+#if KEYVAULT_API_7_4
+using JsonWebKeyType = AzureKeyVaultEmulator.Controllers.JsonWebKeyKty;
+using JsonWebKeyCurveName = AzureKeyVaultEmulator.Controllers.JsonWebKeyCrv;
+using JsonWebKeyEncryptionAlgorithm = AzureKeyVaultEmulator.Controllers.KeyOperationsParametersAlg;
+using JwkSignatureAlgorithm = AzureKeyVaultEmulator.Controllers.KeySignParametersAlg;
+using JwkVerifyAlgorithm = AzureKeyVaultEmulator.Controllers.KeyVerifyParametersAlg;
+#elif KEYVAULT_API_7_5_OR_LATER
+using JwkSignatureAlgorithm = AzureKeyVaultEmulator.Controllers.JsonWebKeySignatureAlgorithm;
+using JwkVerifyAlgorithm = AzureKeyVaultEmulator.Controllers.JsonWebKeySignatureAlgorithm;
+#endif
+
 namespace AzureKeyVaultEmulator.Services;
 
 internal static class CryptoService
@@ -17,12 +28,12 @@ internal static class CryptoService
 
         switch (key.Kty)
         {
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 return EncryptRsa(op, key);
 
-            case JsonWebKeyKty.Oct:
-            case JsonWebKeyKty.OctHSM:
+            case JsonWebKeyType.Oct:
+            case JsonWebKeyType.OctHSM:
             // Per https://learn.microsoft.com/en-us/azure/key-vault/keys/about-keys-details#symmetric-key-algorithms-managed-hsm-only,
             // symmetric key encryption/decryption is allowed only for HSM vaults.
 
@@ -40,12 +51,12 @@ internal static class CryptoService
 
         switch (key.Kty)
         {
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 return DecryptRsa(op, key);
 
-            case JsonWebKeyKty.Oct:
-            case JsonWebKeyKty.OctHSM:
+            case JsonWebKeyType.Oct:
+            case JsonWebKeyType.OctHSM:
             // Per https://learn.microsoft.com/en-us/azure/key-vault/keys/about-keys-details#symmetric-key-algorithms-managed-hsm-only,
             // symmetric key encryption/decryption is allowed only for HSM vaults.
 
@@ -63,12 +74,12 @@ internal static class CryptoService
 
         switch (key.Kty)
         {
-            case JsonWebKeyKty.EC:
-            case JsonWebKeyKty.ECHSM:
+            case JsonWebKeyType.EC:
+            case JsonWebKeyType.ECHSM:
                 return SignEc(p, key);
 
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 return SignRsa(p, key);
 
             default:
@@ -78,19 +89,19 @@ internal static class CryptoService
 
     public static KeyVerifyResult Verify(KeyVerifyParameters p, JsonWebKey key)
     {
-        if (!CanUseAlgorithm((KeySignParametersAlg)p.Alg, key))
+        if (!CanUseAlgorithm((JwkSignatureAlgorithm)p.Alg, key))
         {
             throw new NotSupportedException();
         }
 
         switch (key.Kty)
         {
-            case JsonWebKeyKty.EC:
-            case JsonWebKeyKty.ECHSM:
+            case JsonWebKeyType.EC:
+            case JsonWebKeyType.ECHSM:
                 return VerifyEc(p, key);
 
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 return VerifyRsa(p, key);
 
             default:
@@ -98,42 +109,42 @@ internal static class CryptoService
         }
     }
 
-    private static bool CanUseAlgorithm(KeyOperationsParametersAlg alg, JsonWebKey key)
+    private static bool CanUseAlgorithm(JsonWebKeyEncryptionAlgorithm alg, JsonWebKey key)
     {
         switch (key.Kty)
         {
-            case JsonWebKeyKty.EC:
-            case JsonWebKeyKty.ECHSM:
+            case JsonWebKeyType.EC:
+            case JsonWebKeyType.ECHSM:
                 return false;
 
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 return alg switch
                 {
-                    KeyOperationsParametersAlg.RSAOAEP or
-                    KeyOperationsParametersAlg.RSAOAEP256 or
-                    KeyOperationsParametersAlg.RSA1_5 => true,
+                    JsonWebKeyEncryptionAlgorithm.RSAOAEP or
+                    JsonWebKeyEncryptionAlgorithm.RSAOAEP256 or
+                    JsonWebKeyEncryptionAlgorithm.RSA1_5 => true,
                     _ => false,
                 };
-            case JsonWebKeyKty.Oct:
-            case JsonWebKeyKty.OctHSM:
+            case JsonWebKeyType.Oct:
+            case JsonWebKeyType.OctHSM:
                 Debug.Assert(null != key.K);
                 byte[] symmetricKey = WebEncoders.Base64UrlDecode(key.K);
 
                 return alg switch
                 {
-                    KeyOperationsParametersAlg.A128GCM or
-                    KeyOperationsParametersAlg.A128KW or
-                    KeyOperationsParametersAlg.A128CBC or
-                    KeyOperationsParametersAlg.A128CBCPAD => 128 == symmetricKey.Length * 8,
-                    KeyOperationsParametersAlg.A192GCM or
-                    KeyOperationsParametersAlg.A192KW or
-                    KeyOperationsParametersAlg.A192CBC or
-                    KeyOperationsParametersAlg.A192CBCPAD => 192 == symmetricKey.Length * 8,
-                    KeyOperationsParametersAlg.A256GCM or
-                    KeyOperationsParametersAlg.A256KW or
-                    KeyOperationsParametersAlg.A256CBC or
-                    KeyOperationsParametersAlg.A256CBCPAD => 256 == symmetricKey.Length * 8,
+                    JsonWebKeyEncryptionAlgorithm.A128GCM or
+                    JsonWebKeyEncryptionAlgorithm.A128KW or
+                    JsonWebKeyEncryptionAlgorithm.A128CBC or
+                    JsonWebKeyEncryptionAlgorithm.A128CBCPAD => 128 == symmetricKey.Length * 8,
+                    JsonWebKeyEncryptionAlgorithm.A192GCM or
+                    JsonWebKeyEncryptionAlgorithm.A192KW or
+                    JsonWebKeyEncryptionAlgorithm.A192CBC or
+                    JsonWebKeyEncryptionAlgorithm.A192CBCPAD => 192 == symmetricKey.Length * 8,
+                    JsonWebKeyEncryptionAlgorithm.A256GCM or
+                    JsonWebKeyEncryptionAlgorithm.A256KW or
+                    JsonWebKeyEncryptionAlgorithm.A256CBC or
+                    JsonWebKeyEncryptionAlgorithm.A256CBCPAD => 256 == symmetricKey.Length * 8,
                     _ => false,
                 };
             default:
@@ -141,37 +152,37 @@ internal static class CryptoService
         }
     }
 
-    private static bool CanUseAlgorithm(KeySignParametersAlg alg, JsonWebKey key)
+    private static bool CanUseAlgorithm(JwkSignatureAlgorithm alg, JsonWebKey key)
     {
         switch (key.Kty)
         {
-            case JsonWebKeyKty.EC:
-            case JsonWebKeyKty.ECHSM:
+            case JsonWebKeyType.EC:
+            case JsonWebKeyType.ECHSM:
                 return alg switch
                 {
-                    KeySignParametersAlg.ES256 or
-                    KeySignParametersAlg.ES256K or
-                    KeySignParametersAlg.ES384 or
-                    KeySignParametersAlg.ES512 => true,
+                    JwkSignatureAlgorithm.ES256 or
+                    JwkSignatureAlgorithm.ES256K or
+                    JwkSignatureAlgorithm.ES384 or
+                    JwkSignatureAlgorithm.ES512 => true,
                     _ => false,
                 };
 
-            case JsonWebKeyKty.RSA:
-            case JsonWebKeyKty.RSAHSM:
+            case JsonWebKeyType.RSA:
+            case JsonWebKeyType.RSAHSM:
                 return alg switch
                 {
-                    KeySignParametersAlg.PS256 or
-                    KeySignParametersAlg.PS384 or
-                    KeySignParametersAlg.PS512 or
-                    KeySignParametersAlg.RS256 or
-                    KeySignParametersAlg.RS384 or
-                    KeySignParametersAlg.RS512 => true,
-                    // KeySignParametersAlg.RSNULL => true,
+                    JwkSignatureAlgorithm.PS256 or
+                    JwkSignatureAlgorithm.PS384 or
+                    JwkSignatureAlgorithm.PS512 or
+                    JwkSignatureAlgorithm.RS256 or
+                    JwkSignatureAlgorithm.RS384 or
+                    JwkSignatureAlgorithm.RS512 => true,
+                    // JwkSignatureAlgorithm.RSNULL => true,
                     _ => false,
                 };
 
-            case JsonWebKeyKty.Oct:
-            case JsonWebKeyKty.OctHSM:
+            case JsonWebKeyType.Oct:
+            case JsonWebKeyType.OctHSM:
                 return false;
 
             default:
@@ -185,11 +196,11 @@ internal static class CryptoService
 
         KeyOperationResult result = op.Alg switch
         {
-            KeyOperationsParametersAlg.RSAOAEP =>
+            JsonWebKeyEncryptionAlgorithm.RSAOAEP =>
                 EncryptRsa(value, key, RSAEncryptionPadding.OaepSHA1),
-            KeyOperationsParametersAlg.RSAOAEP256 =>
+            JsonWebKeyEncryptionAlgorithm.RSAOAEP256 =>
                 EncryptRsa(value, key, RSAEncryptionPadding.OaepSHA256),
-            KeyOperationsParametersAlg.RSA1_5 =>
+            JsonWebKeyEncryptionAlgorithm.RSA1_5 =>
                 EncryptRsa(value, key, RSAEncryptionPadding.Pkcs1),
             _ => throw new NotSupportedException(),
         };
@@ -207,11 +218,11 @@ internal static class CryptoService
 
         KeyOperationResult result = op.Alg switch
         {
-            KeyOperationsParametersAlg.RSAOAEP =>
+            JsonWebKeyEncryptionAlgorithm.RSAOAEP =>
                 DecryptRsa(ciphertext, key, RSAEncryptionPadding.OaepSHA1),
-            KeyOperationsParametersAlg.RSAOAEP256 =>
+            JsonWebKeyEncryptionAlgorithm.RSAOAEP256 =>
                 DecryptRsa(ciphertext, key, RSAEncryptionPadding.OaepSHA256),
-            KeyOperationsParametersAlg.RSA1_5 =>
+            JsonWebKeyEncryptionAlgorithm.RSA1_5 =>
                 DecryptRsa(ciphertext, key, RSAEncryptionPadding.Pkcs1),
             _ => throw new NotSupportedException(),
         };
@@ -256,9 +267,9 @@ internal static class CryptoService
         (ECDsa ec, _) = LoadEcFromKey(key);
         HashAlgorithmName alg = signParams.Alg switch
         {
-            KeySignParametersAlg.ES256 => HashAlgorithmName.SHA256,
-            KeySignParametersAlg.ES384 => HashAlgorithmName.SHA384,
-            KeySignParametersAlg.ES512 => HashAlgorithmName.SHA512,
+            JwkSignatureAlgorithm.ES256 => HashAlgorithmName.SHA256,
+            JwkSignatureAlgorithm.ES384 => HashAlgorithmName.SHA384,
+            JwkSignatureAlgorithm.ES512 => HashAlgorithmName.SHA512,
             _ => throw new NotSupportedException(),
         };
         byte[] dataToSign = WebEncoders.Base64UrlDecode(signParams.Value);
@@ -276,9 +287,9 @@ internal static class CryptoService
         (ECDsa ec, _) = LoadEcFromKey(key);
         HashAlgorithmName alg = verifyParams.Alg switch
         {
-            KeyVerifyParametersAlg.ES256 => HashAlgorithmName.SHA256,
-            KeyVerifyParametersAlg.ES384 => HashAlgorithmName.SHA384,
-            KeyVerifyParametersAlg.ES512 => HashAlgorithmName.SHA512,
+            JwkVerifyAlgorithm.ES256 => HashAlgorithmName.SHA256,
+            JwkVerifyAlgorithm.ES384 => HashAlgorithmName.SHA384,
+            JwkVerifyAlgorithm.ES512 => HashAlgorithmName.SHA512,
             _ => throw new NotSupportedException(),
         };
         byte[] signature = WebEncoders.Base64UrlDecode(verifyParams.Value);
@@ -295,12 +306,12 @@ internal static class CryptoService
         using RSA rsa = LoadRsaFromKey(key);
         (HashAlgorithmName alg, RSASignaturePadding pad) = signParams.Alg switch
         {
-            KeySignParametersAlg.PS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
-            KeySignParametersAlg.PS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pss),
-            KeySignParametersAlg.PS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pss),
-            KeySignParametersAlg.RS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1),
-            KeySignParametersAlg.RS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pkcs1),
-            KeySignParametersAlg.RS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1),
+            JwkSignatureAlgorithm.PS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
+            JwkSignatureAlgorithm.PS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pss),
+            JwkSignatureAlgorithm.PS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pss),
+            JwkSignatureAlgorithm.RS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1),
+            JwkSignatureAlgorithm.RS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pkcs1),
+            JwkSignatureAlgorithm.RS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1),
             _ => throw new NotSupportedException(),
         };
         byte[] dataToSign = WebEncoders.Base64UrlDecode(signParams.Value);
@@ -317,12 +328,12 @@ internal static class CryptoService
         using RSA rsa = LoadRsaFromKey(key);
         (HashAlgorithmName alg, RSASignaturePadding pad) = verifyParams.Alg switch
         {
-            KeyVerifyParametersAlg.PS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
-            KeyVerifyParametersAlg.PS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pss),
-            KeyVerifyParametersAlg.PS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pss),
-            KeyVerifyParametersAlg.RS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1),
-            KeyVerifyParametersAlg.RS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pkcs1),
-            KeyVerifyParametersAlg.RS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1),
+            JwkVerifyAlgorithm.PS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
+            JwkVerifyAlgorithm.PS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pss),
+            JwkVerifyAlgorithm.PS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pss),
+            JwkVerifyAlgorithm.RS256 => (HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1),
+            JwkVerifyAlgorithm.RS384 => (HashAlgorithmName.SHA384, RSASignaturePadding.Pkcs1),
+            JwkVerifyAlgorithm.RS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1),
             _ => throw new NotSupportedException(),
         };
         byte[] signature = WebEncoders.Base64UrlDecode(verifyParams.Value);
@@ -358,9 +369,9 @@ internal static class CryptoService
         {
             Curve = key.Crv switch
             {
-                JsonWebKeyCrv.P256 => ECCurve.NamedCurves.nistP256,
-                JsonWebKeyCrv.P384 => ECCurve.NamedCurves.nistP384,
-                JsonWebKeyCrv.P521 => ECCurve.NamedCurves.nistP521,
+                JsonWebKeyCurveName.P256 => ECCurve.NamedCurves.nistP256,
+                JsonWebKeyCurveName.P384 => ECCurve.NamedCurves.nistP384,
+                JsonWebKeyCurveName.P521 => ECCurve.NamedCurves.nistP521,
                 _ => throw new NotSupportedException(),
             },
             Q = new()

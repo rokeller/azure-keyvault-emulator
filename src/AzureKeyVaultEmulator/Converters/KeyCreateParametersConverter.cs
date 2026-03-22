@@ -4,6 +4,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AzureKeyVaultEmulator.Controllers;
 
+#if KEYVAULT_API_7_4
+using JsonWebKeyOperation = AzureKeyVaultEmulator.Controllers.Key_ops;
+using JsonWebKeyCurveName = AzureKeyVaultEmulator.Controllers.KeyCreateParametersCrv;
+#elif KEYVAULT_API_7_5_OR_LATER
+using KeyCreateParametersKty = AzureKeyVaultEmulator.Controllers.JsonWebKeyType;
+#endif
+
 namespace AzureKeyVaultEmulator.Converters;
 
 internal sealed class KeyCreateParametersConverter : JsonConverter<KeyCreateParameters>
@@ -30,10 +37,10 @@ internal sealed class KeyCreateParametersConverter : JsonConverter<KeyCreatePara
                             res.Key_size = JsonSerializer.Deserialize<int>(ref reader, options);
                             break;
                         case "key_ops":
-                            res.Key_ops = JsonSerializer.Deserialize<List<Key_ops>>(ref reader, options);
+                            res.Key_ops = JsonSerializer.Deserialize<List<JsonWebKeyOperation>>(ref reader, options);
                             break;
                         case "crv":
-                            res.Crv = JsonSerializer.Deserialize<KeyCreateParametersCrv>(ref reader, options);
+                            res.Crv = JsonSerializer.Deserialize<JsonWebKeyCurveName>(ref reader, options);
                             break;
                         case "attributes":
                             res.Attributes = JsonSerializer.Deserialize<KeyAttributes>(ref reader, options);
