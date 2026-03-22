@@ -33,6 +33,28 @@ docker container run --rm -it -p 11001:11001 \
 
 The container by default exposes only the HTTPS endpoints on port 11001.
 
+## Supported API Versions
+
+The Azure Key Vault Emulator is tested against different API versions of the Key
+Vault REST APIs. Please note that not all API versions support all features, and
+the support of a specific API version in the Emulator does not imply that all
+funcationlity from that API version is supported (see also
+[Supported Operations](#supported-operations)).
+
+| API Version | Supported by Emulator |
+|---|---|
+| v7.0 | 🚫 |
+| v7.1 | 🚫 |
+| v7.2 | 🚫 |
+| v7.3 | 🚫 |
+| v7.4 | ✅ |
+| v7.5 | ✅ |
+| v7.6 | ✅ |
+| 2025-07-01 | ✅ |
+
+Please note that older versions (v7.3 and before) may still work with the
+Emulator, they're just not supported at this point.
+
 ## Supported Operations
 
 The tables below show which operations are supported by the emulator. Please
@@ -46,6 +68,8 @@ note that any operations that require an HSM are **not** supported.
 | Delete Key | ✅ | ✅ | ✅ |
 | Get Key (get latest) | ✅ | ✅ | ✅ |
 | Get Key (by version) | ✅ | ✅ | ✅ |
+| Get Key Attestation (get latest) (v7.6+) | 🚫 | 🚫 | 🚫 |
+| Get Key Attestation (by version) (v7.6+) | 🚫 | 🚫 | 🚫 |
 | Get Keys | ✅ | ✅ | ✅ |
 | Get Key Versions | ✅ | ✅ | ✅ |
 | Update Key Metadata | ✅ | ✅ | ✅ |

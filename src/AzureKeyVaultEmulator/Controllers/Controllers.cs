@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -24,7 +25,7 @@ partial class KeysController
     public Task<ActionResult<KeyBundle>> GetKey(
         [BindRequired] string key_name,
         [FromQuery(Name = "api-version")][BindRequired] string api_version,
-        System.Threading.CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
 #pragma warning restore 1573
     {
 #if KEYVAULT_API_7_4
@@ -33,6 +34,27 @@ partial class KeysController
         return _implementation.GetKeyAsync(api_version, key_name, null!, cancellationToken);
 #endif
     }
+
+#if KEYVAULT_API_7_6_OR_LATER
+    /// <summary>
+    /// Gets the public part of a stored key along with its attestation blob.
+    /// </summary>
+    /// <remarks>
+    /// The get key attestation operation returns the key along with its attestation blob. This operation requires the keys/get permission.
+    /// </remarks>
+    /// <param name="api_version">The API version to use for this operation.</param>
+    /// <param name="key_name">The name of the key to retrieve attestation for.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to use.</param>
+    /// <returns>The request has succeeded.</returns>
+    [HttpGet, Route("keys/{key_name}/attestation")]
+    public Task<ActionResult<KeyBundle>> GetKeyAttestation(
+        [FromQuery(Name = "api-version")][BindRequired] string api_version,
+        [BindRequired] string key_name,
+        CancellationToken cancellationToken)
+    {
+        return _implementation.GetKeyAttestationAsync(api_version, key_name, null!, cancellationToken);
+    }
+#endif
 }
 
 /// <summary>
@@ -58,7 +80,7 @@ partial class SecretsController
 #if KEYVAULT_API_20250701_OR_LATER
         [FromQuery] OutContentType? outContentType,
 #endif
-        System.Threading.CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
 #pragma warning restore 1573
     {
 #if KEYVAULT_API_7_4

@@ -220,7 +220,14 @@ internal sealed partial class KeysControllerImpl(
         CancellationToken cancellationToken = default)
     {
         // See https://learn.microsoft.com/en-us/rest/api/keyvault/keys/get-key-attestation/get-key-attestation?view=rest-keyvault-keys-2025-07-01&tabs=HTTP
-        throw new NotSupportedException();
+        return new BadRequestObjectResult(new
+        {
+            error = new
+            {
+                code = "BadParameter",
+                message = "Method GET does not allow operation 'attestation'",
+            },
+        });
     }
 #endif
 
