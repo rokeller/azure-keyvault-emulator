@@ -64,7 +64,7 @@ note that any operations that require an HSM are **not** supported.
 
 | Operation | EC | RSA | AES |
 |---|---|---|---|
-| Create Key | ✅ (P-256, P-384, P-512) / 🚫 (P-256K) | ✅ | ✅ |
+| Create Key | ✅ (P-256, P-384, P-512, P-256K) | ✅ | ✅ |
 | Delete Key | ✅ | ✅ | ✅ |
 | Get Key (get latest) | ✅ | ✅ | ✅ |
 | Get Key (by version) | ✅ | ✅ | ✅ |
@@ -83,7 +83,7 @@ note that any operations that require an HSM are **not** supported.
 | **Crypto Operations** |
 | Encrypt / Decrypt | ⛔ | ✅ | 🚫 |
 | Wrap / Unwrap | ⛔ | ✅  | 🚫 |
-| Sign / Verify | ✅ (ES256, ES384, ES512) / 🚫 (ES256K) | ✅ (PS256, PS384, PS512, RS256, RS284, RS512) / 🚧 (RSNULL) | ⛔ |
+| Sign / Verify | ✅ (ES256, ES384, ES512, ES256K) | ✅ (PS256, PS384, PS512, RS256, RS284, RS512) / 🚧 (RSNULL) | ⛔ |
 
 | Key ||
 |---|---|

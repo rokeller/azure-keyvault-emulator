@@ -136,6 +136,24 @@ partial class KeysApisTests
         Assert.True(verifyRes.IsValid);
     }
 
+    [Fact]
+    public async Task SignVerifyWorksForSecp256k1Key()
+    {
+        string name = $"sign-verify-ec-ES256K-{Guid.NewGuid()}";
+        string dataToSign = "data-to-sign-with-ec-ES256K";
+        byte[] data = Encoding.UTF8.GetBytes(dataToSign);
+        SignatureAlgorithm alg = new("ES256K");
+        CreateEcKeyOptions options = new(name) { CurveName = KeyCurveName.P256K, Enabled = true };
+        KeyVaultKey key = (await client.CreateEcKeyAsync(options)).Value;
+        CryptographyClient cryptoClient = CreateCryptoClient(key);
+
+        SignResult signRes = await cryptoClient.SignDataAsync(alg, data);
+        Assert.Equal(key.Key.Id, signRes.KeyId);
+
+        VerifyResult verifyRes = await cryptoClient.VerifyDataAsync(alg, data, signRes.Signature);
+        Assert.True(verifyRes.IsValid);
+    }
+
     [Theory]
     [InlineData("RS256")]
     [InlineData("RS384")]

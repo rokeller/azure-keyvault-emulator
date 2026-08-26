@@ -79,6 +79,7 @@ partial class KeysApisTests
     [InlineData("P-256")]
     [InlineData("P-384")]
     [InlineData("P-521")]
+    [InlineData("P-256K")]
     public async Task CreateEcKeyWorksForCurve(string curveName)
     {
         string keyName = Guid.NewGuid().ToString("N");
@@ -90,21 +91,6 @@ partial class KeysApisTests
         KeyVaultKey key = result.Value;
         Assert.Equal(KeyType.Ec, key.KeyType);
         Assert.Equal(new KeyCurveName(curveName), key.Key.CurveName);
-    }
-
-    [Theory]
-    [InlineData("P-256K")]
-    public async Task CreateEcKeyFailsForUnsupportedCurve(string curveName)
-    {
-        string keyName = Guid.NewGuid().ToString("N");
-        CreateEcKeyOptions options = new(keyName)
-        {
-            CurveName = new KeyCurveName(curveName),
-        };
-
-        RequestFailedException ex = await Assert.ThrowsAsync<RequestFailedException>(
-            () => client.CreateEcKeyAsync(options));
-        Assert.Equal(500, ex.Status);
     }
 
     [Theory]

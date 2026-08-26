@@ -69,6 +69,21 @@ partial class KeysApisTests
     }
 
     [Fact]
+    public async Task ImportEcKeyWithSecp256k1CurveCreatesNewKey()
+    {
+        string name = Guid.NewGuid().ToString();
+        using ECDsa ecdsa = ECDsa.Create();
+        ecdsa.GenerateKey(ECCurve.CreateFromValue("1.3.132.0.10"));
+        JsonWebKey jwk = new(ecdsa, includePrivateParameters: true, [KeyOperation.Sign, KeyOperation.Verify]);
+        ImportKeyOptions options = new(name, jwk);
+
+        KeyVaultKey key = await client.ImportKeyAsync(options);
+
+        Assert.Equal(KeyType.Ec, key.KeyType);
+        Assert.Equal(KeyCurveName.P256K, key.Key.CurveName);
+    }
+
+    [Fact]
     public async Task ReleaseKeyFails_Unsupported()
     {
         string name = Guid.NewGuid().ToString();

@@ -37,6 +37,7 @@ builder.Services
         converters.Add(new KeyCreateParametersConverter());
         converters.Add(new KeyBundleConverter());
         converters.Add(new KeyOperationsParametersConverter());
+        converters.Add(new JsonWebKeyConverter());
     })
     .Services
     .AddSingleton<IEnumToStringConvertible<JsonWebKeyOperation>>(EnumStringValueConverter.Create<JsonWebKeyOperation>())

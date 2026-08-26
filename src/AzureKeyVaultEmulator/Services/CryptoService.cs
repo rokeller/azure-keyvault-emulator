@@ -268,6 +268,7 @@ internal static class CryptoService
         HashAlgorithmName alg = signParams.Alg switch
         {
             JwkSignatureAlgorithm.ES256 => HashAlgorithmName.SHA256,
+            JwkSignatureAlgorithm.ES256K => HashAlgorithmName.SHA256,
             JwkSignatureAlgorithm.ES384 => HashAlgorithmName.SHA384,
             JwkSignatureAlgorithm.ES512 => HashAlgorithmName.SHA512,
             _ => throw new NotSupportedException(),
@@ -288,6 +289,7 @@ internal static class CryptoService
         HashAlgorithmName alg = verifyParams.Alg switch
         {
             JwkVerifyAlgorithm.ES256 => HashAlgorithmName.SHA256,
+            JwkVerifyAlgorithm.ES256K => HashAlgorithmName.SHA256,
             JwkVerifyAlgorithm.ES384 => HashAlgorithmName.SHA384,
             JwkVerifyAlgorithm.ES512 => HashAlgorithmName.SHA512,
             _ => throw new NotSupportedException(),
@@ -367,13 +369,7 @@ internal static class CryptoService
     {
         ECParameters ecParameters = new()
         {
-            Curve = key.Crv switch
-            {
-                JsonWebKeyCurveName.P256 => ECCurve.NamedCurves.nistP256,
-                JsonWebKeyCurveName.P384 => ECCurve.NamedCurves.nistP384,
-                JsonWebKeyCurveName.P521 => ECCurve.NamedCurves.nistP521,
-                _ => throw new NotSupportedException(),
-            },
+            Curve = key.Crv.HasValue ? KeyFactory.GetEcCurve(key.Crv.Value) : throw new NotSupportedException(),
             Q = new()
             {
                 X = WebEncoders.Base64UrlDecode(key.X!),
