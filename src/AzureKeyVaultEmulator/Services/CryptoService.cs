@@ -265,16 +265,15 @@ internal static class CryptoService
     private static KeyOperationResult SignEc(KeySignParameters signParams, JsonWebKey key)
     {
         (ECDsa ec, _) = LoadEcFromKey(key);
-        HashAlgorithmName alg = signParams.Alg switch
-        {
-            JwkSignatureAlgorithm.ES256 => HashAlgorithmName.SHA256,
-            JwkSignatureAlgorithm.ES256K => HashAlgorithmName.SHA256,
-            JwkSignatureAlgorithm.ES384 => HashAlgorithmName.SHA384,
-            JwkSignatureAlgorithm.ES512 => HashAlgorithmName.SHA512,
-            _ => throw new NotSupportedException(),
-        };
+        // signParams.Value is already a digest computed by the caller, not raw message data.
+        // Per Azure Key Vault's REST API: "Creates a signature from a digest using the
+        // specified key." (Sign operation, KeySignParameters.value is base64url, no re-hashing
+        // implied): https://learn.microsoft.com/en-us/rest/api/keyvault/keys/sign/sign
+        // Alg only records which hash algorithm the caller used to produce the digest; the
+        // server must sign the submitted bytes as-is. Use SignHash, not SignData (which would
+        // hash the digest a second time).
         byte[] dataToSign = WebEncoders.Base64UrlDecode(signParams.Value);
-        byte[] sig = ec.SignData(dataToSign, alg);
+        byte[] sig = ec.SignHash(dataToSign);
 
         return new()
         {
@@ -286,20 +285,14 @@ internal static class CryptoService
     private static KeyVerifyResult VerifyEc(KeyVerifyParameters verifyParams, JsonWebKey key)
     {
         (ECDsa ec, _) = LoadEcFromKey(key);
-        HashAlgorithmName alg = verifyParams.Alg switch
-        {
-            JwkVerifyAlgorithm.ES256 => HashAlgorithmName.SHA256,
-            JwkVerifyAlgorithm.ES256K => HashAlgorithmName.SHA256,
-            JwkVerifyAlgorithm.ES384 => HashAlgorithmName.SHA384,
-            JwkVerifyAlgorithm.ES512 => HashAlgorithmName.SHA512,
-            _ => throw new NotSupportedException(),
-        };
+        // See SignEc: verifyParams.Digest is already a digest, not raw message data; verify it
+        // directly (VerifyHash), do not hash it again.
         byte[] signature = WebEncoders.Base64UrlDecode(verifyParams.Value);
         byte[] digest = WebEncoders.Base64UrlDecode(verifyParams.Digest);
 
         return new()
         {
-            Value = ec.VerifyData(digest, signature, alg),
+            Value = ec.VerifyHash(digest, signature),
         };
     }
 
@@ -316,8 +309,11 @@ internal static class CryptoService
             JwkSignatureAlgorithm.RS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1),
             _ => throw new NotSupportedException(),
         };
+        // signParams.Value is already a digest, not raw message data (see SignEc for the
+        // Azure Key Vault Sign REST API reference). Use SignHash (not SignData) so it is not
+        // hashed a second time before signing.
         byte[] dataToSign = WebEncoders.Base64UrlDecode(signParams.Value);
-        byte[] sig = rsa.SignData(dataToSign, alg, pad);
+        byte[] sig = rsa.SignHash(dataToSign, alg, pad);
         return new()
         {
             Kid = key.Kid,
@@ -338,12 +334,14 @@ internal static class CryptoService
             JwkVerifyAlgorithm.RS512 => (HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1),
             _ => throw new NotSupportedException(),
         };
+        // verifyParams.Value/Digest are already signature/digest bytes; use VerifyHash (not
+        // VerifyData) so the digest is not hashed a second time before verification.
         byte[] signature = WebEncoders.Base64UrlDecode(verifyParams.Value);
         byte[] digest = WebEncoders.Base64UrlDecode(verifyParams.Digest);
 
         return new()
         {
-            Value = rsa.VerifyData(digest, signature, alg, pad),
+            Value = rsa.VerifyHash(digest, signature, alg, pad),
         };
     }
 

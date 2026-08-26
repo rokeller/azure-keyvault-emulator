@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Azure;
@@ -151,6 +152,52 @@ partial class KeysApisTests
         Assert.Equal(key.Key.Id, signRes.KeyId);
 
         VerifyResult verifyRes = await cryptoClient.VerifyDataAsync(alg, data, signRes.Signature);
+        Assert.True(verifyRes.IsValid);
+    }
+
+    [Fact]
+    public async Task SignVerifyWorksForSecp256k1KeyUsingPreHashedDigest()
+    {
+        // Azure Key Vault's Sign REST operation "[c]reates a signature from a digest using the
+        // specified key" (https://learn.microsoft.com/en-us/rest/api/keyvault/keys/sign/sign):
+        // KeySignParameters.value/KeyVerifyParameters.digest are base64url-encoded digests the
+        // caller already computed; Alg only records which hash algorithm produced them. The
+        // server must sign/verify those bytes as-is, never hash them again.
+        // CryptographyClient.SignAsync/VerifyAsync (as opposed to SignDataAsync/VerifyDataAsync,
+        // which hash client-side before calling the same endpoint) exercise this raw-digest
+        // contract directly, matching Azure Key Vault clients that pre-hash their own payloads
+        // (e.g. Ethereum keccak256 signers) against the service.
+        string name = $"sign-verify-ec-ES256K-prehashed-{Guid.NewGuid()}";
+        byte[] data = Encoding.UTF8.GetBytes("data-to-sign-with-ec-ES256K-prehashed");
+        byte[] digest = SHA256.HashData(data);
+        SignatureAlgorithm alg = new("ES256K");
+        CreateEcKeyOptions options = new(name) { CurveName = KeyCurveName.P256K, Enabled = true };
+        KeyVaultKey key = (await client.CreateEcKeyAsync(options)).Value;
+        CryptographyClient cryptoClient = CreateCryptoClient(key);
+
+        SignResult signRes = await cryptoClient.SignAsync(alg, digest);
+        Assert.Equal(key.Key.Id, signRes.KeyId);
+
+        VerifyResult verifyRes = await cryptoClient.VerifyAsync(alg, digest, signRes.Signature);
+        Assert.True(verifyRes.IsValid);
+    }
+
+    [Fact]
+    public async Task SignVerifyWorksForRsaKeyUsingPreHashedDigest()
+    {
+        // See SignVerifyWorksForSecp256k1KeyUsingPreHashedDigest: Sign/Verify must not hash
+        // Value/Digest a second time.
+        string name = $"sign-verify-rsa-RS256-prehashed-{Guid.NewGuid()}";
+        byte[] data = Encoding.UTF8.GetBytes("data-to-sign-with-rsa-RS256-prehashed");
+        byte[] digest = SHA256.HashData(data);
+        SignatureAlgorithm alg = new("RS256");
+        KeyVaultKey key = await CreateRsaKeyAsync(name);
+        CryptographyClient cryptoClient = CreateCryptoClient(key);
+
+        SignResult signRes = await cryptoClient.SignAsync(alg, digest);
+        Assert.Equal(key.Key.Id, signRes.KeyId);
+
+        VerifyResult verifyRes = await cryptoClient.VerifyAsync(alg, digest, signRes.Signature);
         Assert.True(verifyRes.IsValid);
     }
 
