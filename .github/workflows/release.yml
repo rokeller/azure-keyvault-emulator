@@ -85,6 +85,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # dotnet build's OpenAPI-merge MSBuild target shells out to pnpm; needed on
+      # every matrix leg (unlike index.html, this isn't something we can generate
+      # once and share, since it runs as part of the per-arch dotnet build below).
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+          cache-dependency-path: |
+            .openapi/pnpm-lock.yaml
+
       # index.html is architecture-independent (rendered from README.md once in
       # build-test); download it here instead of reinstalling mdtohtml per matrix
       # leg, which also avoids an arch-mismatched cached binary on non-amd64 runners.
