@@ -62,6 +62,13 @@ jobs:
         run: |
           cat .coverage/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: index-html
+          path: src/AzureKeyVaultEmulator/index.html
+          if-no-files-found: error
+          retention-days: 1
+
   container-image:
     strategy:
       fail-fast: false
@@ -78,29 +85,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Install pnpm and node for OpenAPI merge
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
+      # index.html is architecture-independent (rendered from README.md once in
+      # build-test); download it here instead of reinstalling mdtohtml per matrix
+      # leg, which also avoids an arch-mismatched cached binary on non-amd64 runners.
+      - uses: actions/download-artifact@v4
         with:
-          version: 10
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24.x
-          cache: pnpm
-          cache-dependency-path: |
-            .openapi/pnpm-lock.yaml
-
-      - name: Install mdtohtml
-        uses: actions-go/go-install@main
-        with:
-          module: github.com/gomarkdown/mdtohtml@latest
+          name: index-html
+          path: src/AzureKeyVaultEmulator
 
       # We don't want to add these tools/steps to the Dockerfile, so let's do
       # it here instead.
       - name: Prepare building image
         run: |
-          mdtohtml -page README.md src/AzureKeyVaultEmulator/index.html
           dotnet restore --locked-mode
           dotnet build --no-restore
 
