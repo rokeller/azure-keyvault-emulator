@@ -62,19 +62,32 @@ jobs:
         run: |
           cat .coverage/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: index-html
+          path: src/AzureKeyVaultEmulator/index.html
+          if-no-files-found: error
+          retention-days: 1
+
   container-image:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
     needs: build-test
     permissions:
       packages: write
     steps:
       - uses: actions/checkout@v7
 
-      - name: Determine image tags
-        run: |
-          bash extract-tags.sh "$GITHUB_REF_NAME" >> "$GITHUB_ENV"
-
-      # Install pnpm and node for OpenAPI merge
+      # dotnet build's OpenAPI-merge MSBuild target shells out to pnpm; needed on
+      # every matrix leg (unlike index.html, this isn't something we can generate
+      # once and share, since it runs as part of the per-arch dotnet build below).
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
@@ -87,16 +100,18 @@ jobs:
           cache-dependency-path: |
             .openapi/pnpm-lock.yaml
 
-      - name: Install mdtohtml
-        uses: actions-go/go-install@main
+      # index.html is architecture-independent (rendered from README.md once in
+      # build-test); download it here instead of reinstalling mdtohtml per matrix
+      # leg, which also avoids an arch-mismatched cached binary on non-amd64 runners.
+      - uses: actions/download-artifact@v4
         with:
-          module: github.com/gomarkdown/mdtohtml@latest
+          name: index-html
+          path: src/AzureKeyVaultEmulator
 
       # We don't want to add these tools/steps to the Dockerfile, so let's do
       # it here instead.
       - name: Prepare building image
         run: |
-          mdtohtml -page README.md src/AzureKeyVaultEmulator/index.html
           dotnet restore --locked-mode
           dotnet build --no-restore
 
@@ -108,28 +123,75 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
-      # Release builds publish the image with tags <major>, <major>.<minor>, and
-      # <major>.<minor>.<patch>.
+      # Native arm64/amd64 runners build each platform's image directly (no QEMU
+      # emulation), pushed by digest only; the merge-manifest job below combines
+      # both digests into the final multi-platform tags.
       - uses: docker/build-push-action@v7
-        if: ${{ success() && env.VER_MAJOR_MINOR_PATCH == env.VER_FULL }}
+        id: build
         with:
           context: .
-          push: true
+          platforms: linux/${{ matrix.arch }}
           build-args: |
             SKIP_CODE_GENERATION=true
-          tags: |
-            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_MAJOR }}
-            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_MAJOR_MINOR }}
-            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_MAJOR_MINOR_PATCH }}
+          outputs: type=image,name=${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-manifest:
+    runs-on: ubuntu-latest
+    needs: container-image
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Determine image tags
+        run: |
+          bash extract-tags.sh "$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.IMAGE_SERVER }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Release builds publish the image with tags <major>, <major>.<minor>, and
+      # <major>.<minor>.<patch>.
+      - name: Create manifest list and push (release)
+        if: ${{ env.VER_MAJOR_MINOR_PATCH == env.VER_FULL }}
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            --tag "${IMAGE_SERVER}/${IMAGE_NAME}:v${VER_MAJOR}" \
+            --tag "${IMAGE_SERVER}/${IMAGE_NAME}:v${VER_MAJOR_MINOR}" \
+            --tag "${IMAGE_SERVER}/${IMAGE_NAME}:v${VER_MAJOR_MINOR_PATCH}" \
+            $(printf "${IMAGE_SERVER}/${IMAGE_NAME}@sha256:%s " *)
 
       # Pre-release builds always publish the image with just the pre-release
       # version tag.
-      - uses: docker/build-push-action@v7
-        if: ${{ success() && env.VER_MAJOR_MINOR_PATCH != env.VER_FULL }}
-        with:
-          context: .
-          push: true
-          build-args: |
-            SKIP_CODE_GENERATION=true
-          tags: |
-            ${{ env.IMAGE_SERVER }}/${{ env.IMAGE_NAME }}:v${{ env.VER_FULL }}
+      - name: Create manifest list and push (pre-release)
+        if: ${{ env.VER_MAJOR_MINOR_PATCH != env.VER_FULL }}
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            --tag "${IMAGE_SERVER}/${IMAGE_NAME}:v${VER_FULL}" \
+            $(printf "${IMAGE_SERVER}/${IMAGE_NAME}@sha256:%s " *)

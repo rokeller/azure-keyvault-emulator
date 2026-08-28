@@ -13,19 +13,23 @@ internal static class KeyFactory
     private const JsonWebKeyCurveName DefaultEcCurve = JsonWebKeyCurveName.P256;
     private const int DefaultRsaKeySize = 2048;
     private const int DefaultAesKeySize = 256;
+    private const string Secp256k1Oid = "1.3.132.0.10";
 
     private static readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
 
+    public static ECCurve GetEcCurve(JsonWebKeyCurveName crv) => crv switch
+    {
+        JsonWebKeyCurveName.P256 => ECCurve.NamedCurves.nistP256,
+        JsonWebKeyCurveName.P384 => ECCurve.NamedCurves.nistP384,
+        JsonWebKeyCurveName.P521 => ECCurve.NamedCurves.nistP521,
+        JsonWebKeyCurveName.P256K => ECCurve.CreateFromValue(Secp256k1Oid),
+        _ => throw new NotSupportedException(),
+    };
+
     public static (ECDsa, JsonWebKeyCurveName) CreateEcKey(JsonWebKeyCurveName? crv)
     {
-        ECCurve curve = (crv ?? DefaultEcCurve) switch
-        {
-            JsonWebKeyCurveName.P256 => ECCurve.NamedCurves.nistP256,
-            JsonWebKeyCurveName.P384 => ECCurve.NamedCurves.nistP384,
-            JsonWebKeyCurveName.P521 => ECCurve.NamedCurves.nistP521,
-            _ => throw new NotSupportedException(),
-        };
-        return (ECDsa.Create(curve), crv ?? DefaultEcCurve);
+        JsonWebKeyCurveName curveName = crv ?? DefaultEcCurve;
+        return (ECDsa.Create(GetEcCurve(curveName)), curveName);
     }
 
     public static RSA CreateRsaKey(int? keySize)
