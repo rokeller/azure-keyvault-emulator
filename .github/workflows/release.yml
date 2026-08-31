@@ -103,7 +103,7 @@ jobs:
       # index.html is architecture-independent (rendered from README.md once in
       # build-test); download it here instead of reinstalling mdtohtml per matrix
       # leg, which also avoids an arch-mismatched cached binary on non-amd64 runners.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: index-html
           path: src/AzureKeyVaultEmulator
@@ -160,7 +160,7 @@ jobs:
         run: |
           bash extract-tags.sh "$GITHUB_REF_NAME" >> "$GITHUB_ENV"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: /tmp/digests
           pattern: digests-*
